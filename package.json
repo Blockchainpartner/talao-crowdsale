@@ -2,9 +2,9 @@
   "name": "emindhub-crowdsale",
   "version": "1.0.0",
   "description": "",
-  "main": "truffle.js",
-  "directories": {
-    "test": "test"
+  "scripts": {
+    "test": "scripts/test.sh",
+    "console": "truffle console"
   },
   "dependencies": {
     "zeppelin-solidity": "^1.5.0"
@@ -24,9 +24,6 @@
     "solidity-coverage": "^0.4.2",
     "truffle": "^4.0.1",
     "truffle-hdwallet-provider": "0.0.3"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
