@@ -69,7 +69,8 @@ contract('EmindhubCrowdsale', function(accounts) {
       // Maximum amount of funds to be raised - 20 000 ETH
       let cap = 20000000000000000000000;
       // address where funds are collected
-      let wallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7045"
+      let wallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7045";
+      let roundWallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7047"
       let teamWallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7046";
 
         beforeEach(async () => {
@@ -88,30 +89,34 @@ contract('EmindhubCrowdsale', function(accounts) {
           await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "300000000000000000000000" ,gas: 4700000}).should.be.rejectedWith(revert);
         });
 
-        it( 'should give the team their tokens if the sale is successful', async () => {
+        it( 'should give the team their tokens and mint the next round tokens if the sale is successful', async () => {
           await increaseTimeTo(startSale+1);
           await web3.eth.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "20000000000000000000000" ,gas: 4700000});
           await increaseTimeTo(endTime+1);
           await EmindhubCrowdsaleInstance.finalize({from: accounts[0]});
           let teamBalance = await expInstance.balanceOf(teamWallet);
+          let roundBalance = await expInstance.balanceOf(roundWallet);
           // team should get 15M tokens
-          assert.equal(teamBalance.toNumber(), 15000000000000000000000000);
+          assert.equal(teamBalance.toNumber(), web3.toWei("15000000"));
+          // round should get 30M tokens
+          assert.equal(roundBalance.toNumber(), web3.toWei("30000000"));
         });
 
-        it( 'should not give the team their tokens if the sale is unsuccessful', async () => {
+        it( 'should not give the team their tokens nor next rounds tokens if the sale is unsuccessful', async () => {
           await increaseTimeTo(startSale+1);
           await web3.eth.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "1" ,gas: 4700000});
           await increaseTimeTo(endTime+1);
           await EmindhubCrowdsaleInstance.finalize({from: accounts[0]});
-          let foundationBalance = await expInstance.balanceOf(wallet);
-          assert.equal(foundationBalance.toNumber(), 0);
+          let teamBalance = await expInstance.balanceOf(teamWallet);
+          let roundBalance = await expInstance.balanceOf(roundWallet);
+          assert.equal(teamBalance.toNumber(), 0);
+          assert.equal(roundBalance.toNumber(), 0);
         });
 
         it('should not be able to participate after end time', async () => {
           await increaseTimeTo(endTime+1);
           await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "100" ,gas: 4700000}).should.be.rejectedWith(revert);
           let saleEnded = await EmindhubCrowdsaleInstance.hasEnded();
-          console.log(saleEnded);
           assert.equal(saleEnded, true);
         });
 
@@ -127,6 +132,7 @@ contract('EmindhubCrowdsale', function(accounts) {
           await increaseTimeTo(endTime+1);
           await EmindhubCrowdsaleInstance.finalize({from: accounts[0]});
           let finalized = await EmindhubCrowdsaleInstance.isFinalized.call();
+          assert.equal(finalized, true);
           await EmindhubCrowdsaleInstance.finalize({from: accounts[0]}).should.be.rejectedWith(revert);
         });
 
@@ -159,8 +165,8 @@ contract('EmindhubCrowdsale', function(accounts) {
           //assert.equal(balance, 15850000000000000000000000);
           let isFinalized = await EmindhubCrowdsaleInstance.isFinalized();
           assert.isTrue(isFinalized);
-          let balanceOwner = await expInstance.balanceOf(wallet);
-          //assert.equal(balanceOwner, 15850000000000000000000000);
+          let balanceTeam = await expInstance.balanceOf(teamWallet);
+          assert.equal(balanceTeam.toNumber(), web3.toWei("15000000"));
         });
 
     });
