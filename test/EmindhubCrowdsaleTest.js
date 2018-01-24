@@ -69,7 +69,8 @@ contract('EmindhubCrowdsale', function(accounts) {
       // Maximum amount of funds to be raised - 20 000 ETH
       let cap = 20000000000000000000000;
       // address where funds are collected
-      let wallet = "0xcf09f36227aa07e3318fa57a16b453d29ecf786d";
+      let wallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7045"
+      let teamWallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7046";
 
         beforeEach(async () => {
           // start and end timestamps where investments are allowed (both inclusive)
@@ -92,9 +93,9 @@ contract('EmindhubCrowdsale', function(accounts) {
           await web3.eth.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "20000000000000000000000" ,gas: 4700000});
           await increaseTimeTo(endTime+1);
           await EmindhubCrowdsaleInstance.finalize({from: accounts[0]});
-          let foundationBalance = await expInstance.balanceOf(wallet);
-          // nb of tokens generated missing
-          assert.equal(foundationBalance.toNumber(), 15850000000000000000000000);
+          let teamBalance = await expInstance.balanceOf(teamWallet);
+          // team should get 15M tokens
+          assert.equal(teamBalance.toNumber(), 15000000000000000000000000);
         });
 
         it( 'should not give the team their tokens if the sale is unsuccessful', async () => {

@@ -16,7 +16,7 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
 
   // these might not be available before the sale
   address public constant teamWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
-  address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
+  address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7047;
 
   //whitelisted addresses
   mapping (address => bool) public whiteListedAddress;
@@ -136,7 +136,7 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
 
   // Override of the validPurchase function so that the new sale periode start at StartSale instead of Startblock.
   function validPurchase() internal constant returns (bool) {
-    bool withinPeriod = block.number >= startGeneralSale && block.number <= endTime;
+    bool withinPeriod = now >= startGeneralSale && now <= endTime;
     bool nonZeroPurchase = msg.value != 0;
     bool withinCap = weiRaised.add(msg.value) <= cap;
     return withinCap && withinPeriod && nonZeroPurchase;
@@ -144,7 +144,7 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
 
   // Sale period start at StartBlock until the sale Start ( startSale )
   function validPurchasePresale() internal constant returns (bool) {
-    bool withinPeriod = block.number >= startTime && block.number < startGeneralSale;
+    bool withinPeriod = now >= startTime && now < startGeneralSale;
     bool nonZeroPurchase = msg.value != 0;
     bool withinCap = weiRaisedPreSale.add(msg.value) <= presaleCap;
     return withinPeriod && nonZeroPurchase && withinCap;
