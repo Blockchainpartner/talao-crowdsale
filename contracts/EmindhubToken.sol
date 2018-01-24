@@ -1,6 +1,6 @@
 pragma solidity ^0.4.18;
 
-import "zeppelin-solidity/contracts/token/MintableToken.sol";
+import 'zeppelin-solidity/contracts/token/MintableToken.sol';
 
 contract EmindhubToken is MintableToken {
   using SafeMath for uint256;
