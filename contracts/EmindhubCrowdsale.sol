@@ -1,8 +1,8 @@
 pragma solidity ^0.4.18;
 
 import './EmindhubToken.sol';
-import '../node_modules/zeppelin-solidity/contracts/crowdsale/RefundableCrowdsale.sol';
-import '../node_modules/zeppelin-solidity/contracts/crowdsale/CappedCrowdsale.sol';
+import './crowdsale/RefundableCrowdsale.sol';
+import './crowdsale/CappedCrowdsale.sol';
 
 contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
 
