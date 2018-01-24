@@ -318,4 +318,85 @@ contract('EmindhubCrowdsale', function(accounts) {
       });
 
   });
+
+  describe('Sale Distribution 2', () => {
+    let EmindhubCrowdsaleInstance;
+    let expInstance;
+    // start and end timestamps where investments are allowed (both inclusive)
+    let startTime = latestTime() + duration.minutes(1);
+    let startSale = latestTime() + duration.minutes(2);
+    let endTime = latestTime() + duration.minutes(3);
+    // presale cap  5 000 ETH
+    let presaleCap = 5000000000000000000000;
+    // minimum amount of funds to be raised in weis - 1 000 ETH
+    let goal = 1000000000000000000000;
+    // Maximum amount of funds to be raised - 20 000 ETH
+    let cap = 20000000000000000000000;
+    // address where funds are collected
+    let wallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7045";
+    let roundWallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7047";
+    let teamWallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7046";
+
+    beforeEach(async () => {
+      startTime = latestTime() + duration.minutes(1);
+      startSale = latestTime() + duration.minutes(2);
+      endTime = latestTime() + duration.minutes(3);
+      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startTime,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0]});
+      let expAddress = await EmindhubCrowdsaleInstance.token.call();
+      expInstance = EmindhubToken.at(expAddress);
+      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), { from: accounts[0]});
+      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[2]), { from: accounts[0]});
+    });
+
+    it('should give 1300 Token at the startSale Block of the sale for 1 wei.', async () => {
+      await increaseTimeTo(startSale);
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: 1 ,gas: 4700000});
+      let balance = await expInstance.balanceOf(accounts[1]);
+      assert.equal(balance, 1300);
+    });
+
+    it('should give 130000000 Token at the startSale Block of the sale for 100000 wei.', async () => {
+      await increaseTimeTo(startSale);
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: 100000 ,gas: 4700000});
+      let balance = await expInstance.balanceOf(accounts[1]);
+      assert.equal(balance, 130000000);
+    });
+
+    it('should give 1300000000000000000001200 Token at the startSale of the sale for 1000000000000000000001 wei.', async () => {
+      await increaseTimeTo(startSale);
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000001" ,gas: 4700000});
+      let balance = await expInstance.balanceOf(accounts[1]);
+      assert.equal(balance, 1300000000000000000001200);
+    });
+
+
+    it('should give 1299999999999999999998700 Token at the startSale of the sale for 999999999999999999999 wei.', async () => {
+      await increaseTimeTo(startSale);
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "999999999999999999999" ,gas: 4700000});
+      let balance = await expInstance.balanceOf(accounts[1]);
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[2], to: EmindhubCrowdsaleInstance.address , value: "1" ,gas: 4700000});
+      let balance2 = await expInstance.balanceOf(accounts[2]);
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[2], to: EmindhubCrowdsaleInstance.address , value: "1" ,gas: 4700000});
+      let balance3 = await expInstance.balanceOf(accounts[2]);
+      console.log(balance);
+      assert.equal(balance, 1299999999999999999998700);
+
+    });
+    it('should give 1300000000000000000000000 Token at the startSale of the sale for 1000000000000000000000 wei.', async () => {
+      await increaseTimeTo(startSale);
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000});
+      let balance = await expInstance.balanceOf(accounts[1]);
+      assert.equal(balance.toNumber(), 1300000000000000000000000);
+    });
+
+    it('should be able to buy everything', async () => {
+      await increaseTimeTo(startSale);
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "20000000000000000000000" ,gas: 4700000});
+      let balance = await expInstance.balanceOf(accounts[1]);
+      // waiting for token number confirmation
+      //assert.equal(balance, 15850000000000000000000000);
+    });
+
+  });
+
 });
