@@ -3,6 +3,7 @@ pragma solidity ^0.4.18;
 import './EmindhubToken.sol';
 import './crowdsale/RefundableCrowdsale.sol';
 import './crowdsale/CappedCrowdsale.sol';
+import './token/TokenTimelock.sol';
 
 contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
 
@@ -11,12 +12,17 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
   uint256 public presaleCap;
   uint256 public startGeneralSale;
 
-  uint256 public constant PRESALERATE = 1700;
-  uint256 public constant GENERALRATE = 1300;
+  uint256 public constant presaleBonus = 400;
+  uint256 public constant generalRate = 1300;
+  uint256 public dateOfBonusRelease;
 
   // these might not be available before the sale
   address public constant teamWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
   address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7047;
+  uint256 public dateOfTeamTokensRelease;
+
+  // vested tokens
+  mapping (address => address) public timelockedTokensContracts;
 
   //whitelisted addresses
   mapping (address => bool) public whiteListedAddress;
@@ -35,6 +41,8 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
 
     startGeneralSale = _startGeneralSale;
     presaleCap = _presaleCap;
+    dateOfBonusRelease = endTime + 90 days;
+    dateOfTeamTokensRelease = endTime + 2 years;
   }
 
   function createTokenContract() internal returns (MintableToken) {
@@ -79,28 +87,12 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
     whiteListedAddressPresale[_users] = false;
   }
 
-  function isWhitelisted(address _user) public constant returns (bool) {
-    return whiteListedAddress[_user];
-  }
-
-  function isWhitelistedPresale(address _user) public constant returns (bool) {
-    return whiteListedAddressPresale[_user];
-  }
-
-  function () external payable {
-    if (validPurchasePresale()){
-      buyTokensPresale(msg.sender);
-    } else {
-      buyTokens(msg.sender);
-    }
-  }
-
   function buyTokens(address beneficiary) payable onlyWhitelisted {
     require(beneficiary != 0x0);
     require(validPurchase());
 
     uint256 weiAmount = msg.value;
-    uint256 tokens = weiAmount.mul(GENERALRATE);
+    uint256 tokens = weiAmount.mul(generalRate);
     weiRaised = weiRaised.add(weiAmount);
 
     token.mint(beneficiary, tokens);
@@ -112,29 +104,55 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
     require(beneficiary != 0x0);
     require(validPurchasePresale());
 
+    // minting tokens at general rate because these tokens are not timelocked
     uint256 weiAmount = msg.value;
-    uint256 tokens = weiAmount.mul(PRESALERATE);
+    uint256 tokens = weiAmount.mul(generalRate);
+    token.mint(beneficiary, tokens);
+
+    // checking if a timelock contract has been already created (not the first presale investment)
+    // creating a timelock contract if none exists
+    if(timelockedTokensContracts[msg.sender] == 0) {
+      address timelockContract = new TokenTimelock(token, msg.sender, dateOfBonusRelease);
+      timelockedTokensContracts[msg.sender] = timelockContract;
+    }
+
+    // minting timelocked tokens ; balance goes to the timelock contract
+    uint256 timelockedTokens = weiAmount.mul(presaleBonus);
+    token.mint(timelockedTokensContracts[msg.sender], timelockedTokens);
     weiRaisedPreSale = weiRaisedPreSale.add(weiAmount);
 
-    token.mint(beneficiary, tokens);
-    TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+
+    TokenPurchase(msg.sender, beneficiary, weiAmount, (tokens + timelockedTokens));
     forwardFunds();
   }
 
   function finalization() internal {
     if (goalReached()) {
       uint256 totalSupply = token.totalSupply();
-      if(weiRaised<30000000000000000000000000)
+      //if(weiRaised<30000000000000000000000000)
+      // TODO: arbitrage timelock/vesting
+      address lockedTeamTokensWallet = new TokenTimelock(token, teamWallet, dateOfTeamTokensRelease);
+      timelockedTokensContracts[teamWallet] = lockedTeamTokensWallet;
       // mint 15 000 000 tokens for team
-      token.mint(teamWallet, 15000000000000000000000000);
+      token.mint(lockedTeamTokensWallet, 15000000000000000000000000);
+      address lockedRoundsTokensWallet = new TokenTimelock(token, futureRoundWallet, dateOfTeamTokensRelease);
+      timelockedTokensContracts[futureRoundWallet] = lockedRoundsTokensWallet;
       // mint 30 000 000 tokens to be timelocked for future round(s)
-      token.mint(futureRoundWallet, 30000000000000000000000000);
+      token.mint(lockedRoundsTokensWallet, 30000000000000000000000000);
       token.finishMinting();
     }
     super.finalization();
   }
 
-  // Override of the validPurchase function so that the new sale periode start at StartSale instead of Startblock.
+  function () external payable {
+    if (validPurchasePresale()){
+      buyTokensPresale(msg.sender);
+    } else {
+      buyTokens(msg.sender);
+    }
+  }
+
+  // TODO doc
   function validPurchase() internal constant returns (bool) {
     bool withinPeriod = now >= startGeneralSale && now <= endTime;
     bool nonZeroPurchase = msg.value != 0;
@@ -142,7 +160,7 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
     return withinCap && withinPeriod && nonZeroPurchase;
   }
 
-  // Sale period start at StartBlock until the sale Start ( startSale )
+  // TODO doc
   function validPurchasePresale() internal constant returns (bool) {
     bool withinPeriod = now >= startTime && now < startGeneralSale;
     bool nonZeroPurchase = msg.value != 0;
@@ -154,6 +172,14 @@ contract EmindhubCrowdsale is RefundableCrowdsale, CappedCrowdsale {
   function goalReached() public constant returns (bool) {
     uint256 totalWeiRaised = weiRaisedPreSale.add(weiRaised);
     return totalWeiRaised >= goal || super.goalReached();
+  }
+
+  function isWhitelisted(address _user) public constant returns (bool) {
+    return whiteListedAddress[_user];
+  }
+
+  function isWhitelistedPresale(address _user) public constant returns (bool) {
+    return whiteListedAddressPresale[_user];
   }
 
 }
