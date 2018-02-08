@@ -1,5 +1,7 @@
 pragma solidity ^0.4.18;
 
+// 1519025365, 1519026365, 1520025365, "1000000000000000000000", "5000000000000000000000", "20000000000000000000000", "0xcf09f36227aa07e3318fa57a16b453d29ecf786d"
+
 import './EmindhubToken.sol';
 import './crowdsale/ProgressiveIndividualCappedCrowdsale.sol';
 import './token/TokenTimelock.sol';
@@ -19,6 +21,7 @@ contract EmindhubCrowdsale is ProgressiveIndividualCappedCrowdsale {
   address public constant reserveWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
   address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7047;
   address public constant foundersWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7048;
+  address public constant futureTokenOwner = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7049;
   uint256 public constant cliffTeamTokensRelease = 1 years;
   uint256 public constant lockTeamTokens = 2 years;
   uint256 public constant futureRoundTokensRelease = 3 years;
@@ -34,6 +37,7 @@ contract EmindhubCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
   function EmindhubCrowdsale(uint256 _startDate, uint256 _startGeneralSale, uint256 _endDate,
                              uint256 _goal,uint256 _presaleCap, uint256 _cap, address _wallet)
+    public
    CappedCrowdsale(_cap) FinalizableCrowdsale()
    RefundableCrowdsale(_goal) Crowdsale(_startDate, _endDate, _wallet)
    ProgressiveIndividualCappedCrowdsale(baseEthCapPerAddress, _startGeneralSale)
@@ -50,7 +54,7 @@ contract EmindhubCrowdsale is ProgressiveIndividualCappedCrowdsale {
   }
 
   function createTokenContract() internal returns (MintableToken) {
-    return new EmindhubToken(1, 1, 10);
+    return new EmindhubToken();
   }
 
   modifier onlyPresaleWhitelisted() {
@@ -67,13 +71,13 @@ contract EmindhubCrowdsale is ProgressiveIndividualCappedCrowdsale {
    * @dev Add a list of address to be whitelisted for the crowdsale only.
    * @param _users , the list of user Address. Tested for out of gas until 200 addresses.
    */
-  function whitelistAddresses( address[] _users) onlyOwner {
+  function whitelistAddresses( address[] _users) public onlyOwner {
     for(uint i = 0 ; i < _users.length ; i++) {
       whiteListedAddress[_users[i]] = true;
     }
   }
 
-  function unwhitelistAddress( address _users) onlyOwner {
+  function unwhitelistAddress( address _users) public onlyOwner {
     whiteListedAddress[_users] = false;
   }
 
@@ -132,9 +136,10 @@ contract EmindhubCrowdsale is ProgressiveIndividualCappedCrowdsale {
   function finalization() internal {
     if (goalReached()) {
       // Vesting for founders ; not revocable
-      uint date1 = now.add(cliffTeamTokensRelease);
-      uint date2 = now.add(lockTeamTokens);
-      address lockedFoundersTokensWallet = new TokenVesting(foundersWallet, now, date1, date2, false);
+      // this will change to 4 static addresses
+      uint cliffDate = now.add(cliffTeamTokensRelease);
+      uint unlockDate = now.add(lockTeamTokens);
+      address lockedFoundersTokensWallet = new TokenVesting(foundersWallet, now, cliffDate, unlockDate, false);
       timelockedTokensContracts[foundersWallet] = lockedFoundersTokensWallet;
       token.mint(lockedFoundersTokensWallet, 15000000000000000000000000);
       // tokens reserve for advisors, bounty and employees : TBD token number ; no timelock
@@ -148,6 +153,7 @@ contract EmindhubCrowdsale is ProgressiveIndividualCappedCrowdsale {
       uint256 toMint = maxSupply.sub(totalSupply);
       token.mint(lockedRoundsTokensWallet, toMint);
       token.finishMinting();
+      token.transferOwnership(owner);
     }
     // if soft cap not reached ; vault opens for refunds
     super.finalization();
@@ -166,7 +172,8 @@ contract EmindhubCrowdsale is ProgressiveIndividualCappedCrowdsale {
     // getting individual cap and checking if cap is not reached
     bool withinPeriod = now >= startGeneralSale && now <= endTime;
     bool nonZeroPurchase = msg.value != 0;
-    bool withinCap = weiRaised.add(msg.value) <= cap;
+    uint256 totalWeiRaised = weiRaisedPreSale.add(weiRaised);
+    bool withinCap = totalWeiRaised.add(msg.value) <= cap;
     return withinCap && withinPeriod && nonZeroPurchase && super.validPurchase();
   }
 

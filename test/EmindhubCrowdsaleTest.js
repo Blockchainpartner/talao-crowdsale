@@ -28,7 +28,7 @@ contract('EmindhubCrowdsale', function(accounts) {
     let wallet = "0xcf09f36227aa07e3318fa57a16b453d29ecf786d";
 
     before(async () => {
-      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:80000000000});
+      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:"17592186044415", gasPrice:1});
     });
 
     it('should set startblock', async () => {
@@ -78,7 +78,7 @@ contract('EmindhubCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
-      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:80000000000});
+      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:"17592186044415", gasPrice:1});
       let expAddress = await EmindhubCrowdsaleInstance.token.call();
       expInstance = EmindhubToken.at(expAddress);
     });
@@ -191,7 +191,7 @@ contract('EmindhubCrowdsale', function(accounts) {
         startPresale = latestTime() + duration.minutes(1);
         startSale = latestTime() + duration.days(10);
         endTime = latestTime() + duration.days(30);
-        EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:80000000000});
+        EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:"17592186044415", gasPrice:1});
         let expAddress = await EmindhubCrowdsaleInstance.token.call();
         expInstance = EmindhubToken.at(expAddress);
         await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), { from: accounts[0]})
@@ -310,7 +310,7 @@ contract('EmindhubCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
-      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:80000000000});
+      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:"17592186044415", gasPrice:1});
       let expAddress = await EmindhubCrowdsaleInstance.token.call();
       expInstance = EmindhubToken.at(expAddress);
     });
@@ -350,7 +350,7 @@ contract('EmindhubCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
-      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:80000000000});
+      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:"17592186044415", gasPrice:1});
       let expAddress = await EmindhubCrowdsaleInstance.token.call();
       expInstance = EmindhubToken.at(expAddress);
       await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), { from: accounts[0]});
@@ -427,7 +427,7 @@ contract('EmindhubCrowdsale', function(accounts) {
         startPresale = latestTime() + duration.minutes(1);
         startSale = latestTime() + duration.days(10);
         endTime = latestTime() + duration.days(30);
-        EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:80000000000});
+        EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, { from: accounts[0], gas:"17592186044415", gasPrice:1});
         let expAddress = await EmindhubCrowdsaleInstance.token.call();
         expInstance = EmindhubToken.at(expAddress);
         await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), { from: accounts[0]});
@@ -497,15 +497,10 @@ contract('EmindhubCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endSale = latestTime() + duration.days(30);
-      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,wallet, { from: accounts[0], gas:80000000000});
+      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,wallet, { from: accounts[0], gas:"17592186044415", gasPrice:1});
       let expAddress = await EmindhubCrowdsaleInstance.token.call();
       expInstance = EmindhubToken.at(expAddress);
-      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), { from: accounts[0]});
-      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[2]), { from: accounts[0]});
-      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[3]), { from: accounts[0]});
-      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[4]), { from: accounts[0]});
-      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[5]), { from: accounts[0]});
-      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[6]), { from: accounts[0]});
+      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[1], accounts[2], accounts[3], accounts[4], accounts[5], accounts[6]), { from: accounts[0]});
       await increaseTimeTo(startSale+duration.days(19));
       await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000, gasPrice: 1});
       await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[2], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000, gasPrice: 1});
@@ -519,8 +514,213 @@ contract('EmindhubCrowdsale', function(accounts) {
       assert.equal(finalized, true);
     });
 
-    it('should be possible to do things', async () => {
+    it('token contract should be owned by accounts[0]', async () => {
+      let owner = await expInstance.owner.call();
+      assert.equal(owner, accounts[0], "wrong owner");
+    });
+
+    it('should be possible to set vault deposit to 1 TALAO', async () => {
       await increaseTimeTo(endSale+duration.days(1));
+      await expInstance.setVaultDeposit.sendTransaction("10000000000000000000", {from: accounts[0]});
+      let vaultDeposit = await expInstance.vaultDeposit.call();
+      assert.equal(vaultDeposit, "10000000000000000000", "wrong vault deposit");
+    });
+
+    it('should be possible to create a vault access', async () => {
+      //await expInstance.approve.sendTransaction(expInstance.address, "1000000000000000000", {from: accounts[1]});
+      let totalDeposit1 = await expInstance.totalDeposit.call();
+      let userTokens1 = await expInstance.balanceOf.call(accounts[1]);
+      let balanceContract1 = await expInstance.balanceOf.call(expInstance.address);
+      await expInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]});
+      let totalDeposit2 = await expInstance.totalDeposit.call();
+      let balanceContract2 = await expInstance.balanceOf.call(expInstance.address);
+      let userTokens2 = await expInstance.balanceOf.call(accounts[1]);
+      assert.isAbove(totalDeposit2.toNumber(), totalDeposit1.toNumber(), "nothing deposed?");
+      assert.isAbove(balanceContract2.toNumber(), balanceContract1.toNumber(), "no tokens received");
+      assert.isAbove(userTokens1.toNumber(), userTokens2.toNumber(), "no tokens sent");
+    });
+
+    it('should not be possible to create a vault access twice', async () => {
+      await expInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]}).should.be.rejectedWith(revert);
+    });
+
+    it('should not be possible to create a vault access without tokens', async () => {
+      let totalDeposit1 = await expInstance.totalDeposit.call();
+      let balanceContract1 = await expInstance.balanceOf.call(expInstance.address);
+      await expInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[8]});
+      let totalDeposit2 = await expInstance.totalDeposit.call();
+      let balanceContract2 = await expInstance.balanceOf.call(expInstance.address);
+      assert.equal(totalDeposit1.toNumber(), totalDeposit2.toNumber(), "deposited something somehow");
+      assert.equal(balanceContract2.toNumber(), balanceContract1.toNumber(), "no tokens received");
+    });
+
+    it("should be possible to appoint an agent", async() => {
+      await expInstance.agentApproval.sendTransaction(accounts[7], 90, {from: accounts[1]});
+      let newAgent = await expInstance.getFreelanceAgent.call(accounts[1]);
+      assert.equal(newAgent, accounts[7], "agent not appointed correctly");
+    });
+
+    it("should be possible to appoint a new agent", async() => {
+      await expInstance.agentApproval.sendTransaction(accounts[8], 90, {from: accounts[1]});
+      let newAgent = await expInstance.getFreelanceAgent.call(accounts[1]);
+      assert.equal(newAgent, accounts[8], "agent not appointed correctly");
+    });
+
+    it("should not be possible to appoint an agent without a vault", async() => {
+      await expInstance.agentApproval.sendTransaction(accounts[7], 90, {from: accounts[2]}).should.be.rejectedWith(revert);
+    });
+
+    it("should be possible to get access to a vault", async() => {
+      let balanceUser1 = await expInstance.balanceOf(accounts[3]);
+      let balanceFreelance1 = await expInstance.balanceOf(accounts[1]);
+      let balanceAgent1 = await expInstance.balanceOf(accounts[8]);
+      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[3]});
+      let balanceUser2 = await expInstance.balanceOf(accounts[3]);
+      let balanceFreelance2 = await expInstance.balanceOf(accounts[1]);
+      let balanceAgent2 = await expInstance.balanceOf(accounts[8]);
+      assert.isAbove(balanceAgent2.toNumber(), balanceAgent1.toNumber(), "agent didn't receive its share");
+      assert.isAbove(balanceUser1.toNumber(), balanceUser2.toNumber(), "user didn't send tokens");
+      assert.isAbove(balanceFreelance2.toNumber(), balanceFreelance1.toNumber(), "freelance didn't receive its share");
+      assert.equal(balanceAgent2.toNumber(), web3.toWei(0.1));
+      assert.equal(balanceFreelance2.c[0], balanceFreelance1.c[0]+9000);
+      assert.equal(balanceUser2.c[0], balanceUser1.c[0]-10000);
+    });
+
+    it("should not be possible to get access to a vault without the right amount of tokens", async() => {
+      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[8]}).should.be.rejectedWith(revert);
+      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]});
+    });
+
+    it("should not be possible to withdraw more than fees", async() => {
+      await expInstance.withdrawTalao.sendTransaction("10000000000000000000", {from: accounts[0]}).should.be.rejectedWith(revert);
+    });
+
+    it("should be possible to withdraw tokens sent for other purposes", async() => {
+      await expInstance.transfer.sendTransaction(expInstance.address, "1000000000000000000", {from: accounts[5]})
+      await expInstance.withdrawTalao.sendTransaction("1000000000000000000", {from: accounts[0]});
+    });
+
+    it("should not be possible to ask access twice", async() => {
+      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]}).should.be.rejectedWith(revert);
+    });
+
+    it("should be possible to close a vault", async() => {
+      let balanceFreelance1 = await expInstance.balanceOf(accounts[1]);
+      let totalDeposit1 = await expInstance.totalDeposit.call();
+      await expInstance.closeVaultAccess.sendTransaction({from:accounts[1]});
+      let totalDeposit2 = await expInstance.totalDeposit.call();
+      let balanceFreelance2 = await expInstance.balanceOf(accounts[1]);
+      assert.isAbove(totalDeposit1.toNumber(), totalDeposit2.toNumber(), "total deposit did not change");
+      assert.isAbove(balanceFreelance2.toNumber(), balanceFreelance1.toNumber(), "did not receive deposit");
+    });
+
+    it("should not be possible to access a closed vault", async() => {
+      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[5]}).should.be.rejectedWith(revert);
+    });
+
+    it("should be possible to open a closed vault", async() => {
+      let totalDeposit1 = await expInstance.totalDeposit.call();
+      let userTokens1 = await expInstance.balanceOf.call(accounts[1]);
+      let balanceContract1 = await expInstance.balanceOf.call(expInstance.address);
+      await expInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]});
+      let totalDeposit2 = await expInstance.totalDeposit.call();
+      let balanceContract2 = await expInstance.balanceOf.call(expInstance.address);
+      let userTokens2 = await expInstance.balanceOf.call(accounts[1]);
+      assert.isAbove(totalDeposit2.toNumber(), totalDeposit1.toNumber(), "nothing deposed?");
+      assert.isAbove(balanceContract2.toNumber(), balanceContract1.toNumber(), "no tokens received");
+      assert.isAbove(userTokens1.toNumber(), userTokens2.toNumber(), "no tokens sent");
+    });
+
+    it("should be possible to appoint a new agent", async() => {
+      await expInstance.agentApproval.sendTransaction(accounts[8], 90, {from: accounts[1]});
+      let newAgent = await expInstance.getFreelanceAgent.call(accounts[1]);
+      assert.equal(newAgent, accounts[8], "agent not appointed correctly");
+    });
+
+    it("should be possible to get access to a reopened vault", async() => {
+      let balanceUser1 = await expInstance.balanceOf(accounts[6]);
+      let balanceFreelance1 = await expInstance.balanceOf(accounts[1]);
+      let balanceAgent1 = await expInstance.balanceOf(accounts[8]);
+      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[6]});
+      let balanceUser2 = await expInstance.balanceOf(accounts[6]);
+      let balanceFreelance2 = await expInstance.balanceOf(accounts[1]);
+      let balanceAgent2 = await expInstance.balanceOf(accounts[8]);
+      assert.isAbove(balanceAgent2.toNumber(), balanceAgent1.toNumber(), "agent didn't receive its share");
+      assert.isAbove(balanceUser1.toNumber(), balanceUser2.toNumber(), "user didn't send tokens");
+      assert.isAbove(balanceFreelance2.toNumber(), balanceFreelance1.toNumber(), "freelance didn't receive its share");
+      assert.equal(balanceAgent2.toNumber(), web3.toWei(0.3));
+      assert.equal(balanceFreelance2.c[0], balanceFreelance1.c[0]+9000);
+      assert.equal(balanceUser2.c[0], balanceUser1.c[0]-10000);
+    });
+
+  });
+
+  describe('Buy and sell TALAO', () => {
+    let EmindhubCrowdsaleInstance;
+    let expInstance;
+    // start and end timestamps where investments are allowed (both inclusive)
+    let startPresale = latestTime() + duration.minutes(1);
+    let startSale = latestTime() + duration.days(10);
+    let endSale = latestTime() + duration.days(30);
+    // presale cap  5 000 ETH
+    let presaleCap = 5000000000000000000000;
+    // minimum amount of funds to be raised in weis - 1 000 ETH
+    let goal = 1000000000000000000000;
+    // Maximum amount of funds to be raised - 20 000 ETH
+    let cap = 20000000000000000000000;
+    // address where funds are collected
+    let wallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7045";
+
+    before(async () => {
+      startPresale = latestTime() + duration.minutes(1);
+      startSale = latestTime() + duration.days(10);
+      endSale = latestTime() + duration.days(30);
+      EmindhubCrowdsaleInstance = await EmindhubCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,wallet, { from: accounts[0], gas:"17592186044415", gasPrice:1});
+      let expAddress = await EmindhubCrowdsaleInstance.token.call();
+      expInstance = EmindhubToken.at(expAddress);
+      await EmindhubCrowdsaleInstance.whitelistAddresses(new Array(accounts[1], accounts[2], accounts[3], accounts[4], accounts[5], accounts[6]), { from: accounts[0]});
+      await increaseTimeTo(startSale+duration.days(19));
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[1], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000, gasPrice: 1});
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[2], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000, gasPrice: 1});
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[3], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000, gasPrice: 1});
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[4], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000, gasPrice: 1});
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[5], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000, gasPrice: 1});
+      await EmindhubCrowdsaleInstance.sendTransaction({ from: accounts[6], to: EmindhubCrowdsaleInstance.address , value: "1000000000000000000000" ,gas: 4700000, gasPrice: 1});
+      await increaseTimeTo(endSale+1);
+      await EmindhubCrowdsaleInstance.finalize({from: accounts[0]});
+      let finalized = await EmindhubCrowdsaleInstance.isFinalized.call();
+      assert.equal(finalized, true);
+      await expInstance.transfer.sendTransaction(expInstance.address, "10000000000000000000000", {from: accounts[6]});
+      await expInstance.sendTransaction({from: accounts[8], value:"100000000000000000000"});
+      let balanceContract = await web3.eth.getBalance(expInstance.address);
+      assert.isAbove(balanceContract.toNumber(), 0, "no eth on the contract");
+    });
+
+    it("should be possible to set prices", async() => {
+      await expInstance.setPrices.sendTransaction("1000000000000000000", "1000000000000000000", "1000000000000000000", {from: accounts[0]});
+      let buyPrice = await expInstance.buyPrice.call();
+      assert.equal(buyPrice.toNumber(), 1000000000000000000, "buyPrice not set");
+    });
+
+    it("should be possible to buy 1 TALAO for 1 ETH", async() => {
+      await expInstance.buy.sendTransaction({from: accounts[7], value:"1000000000000000000"});
+      let userBalance = await expInstance.balanceOf.call(accounts[7]);
+      assert.equal(userBalance.toNumber(), 1000000000000000000, "not a correct buy");
+    });
+
+    it("should be possible to buy 2 TALAO for 2 ETH", async() => {
+      await expInstance.buy.sendTransaction({from: accounts[8], value:"2000000000000000000"});
+      let userBalance = await expInstance.balanceOf.call(accounts[8]);
+      assert.equal(userBalance.toNumber(), 2000000000000000000, "not a correct buy");
+    });
+
+    it("should be possible to sell 1 TALAO for 1 ETH", async() => {
+      let ethBalanceUser1 = await web3.eth.getBalance(accounts[7]);
+      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[7], gasPrice:1});
+      let ethBalanceUser2 = await web3.eth.getBalance(accounts[7]);
+      let userBalance = await expInstance.balanceOf.call(accounts[7]);
+      assert.equal(userBalance.toNumber(), 0, "not a correct sell");
+      assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
     });
 
   });
