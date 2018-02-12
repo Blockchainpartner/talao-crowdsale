@@ -691,15 +691,18 @@ contract('EmindhubCrowdsale', function(accounts) {
       let finalized = await EmindhubCrowdsaleInstance.isFinalized.call();
       assert.equal(finalized, true);
       await expInstance.transfer.sendTransaction(expInstance.address, "10000000000000000000000", {from: accounts[6]});
-      await expInstance.sendTransaction({from: accounts[8], value:"100000000000000000000"});
+      await expInstance.sendTransaction({from: accounts[0], value:"100000000000000000000"});
+      //await expInstance.setMinBalance.sendTransaction("50000000000000000" ,{from: accounts[0]});
+      let minBalance = await expInstance.minBalanceForAccounts.call();
+      console.log(minBalance);
       let balanceContract = await web3.eth.getBalance(expInstance.address);
       assert.isAbove(balanceContract.toNumber(), 0, "no eth on the contract");
     });
 
     it("should be possible to set prices", async() => {
       await expInstance.setPrices.sendTransaction("1000000000000000000", "1000000000000000000", "1000000000000000000", {from: accounts[0]});
-      let buyPrice = await expInstance.buyPrice.call();
-      assert.equal(buyPrice.toNumber(), 1000000000000000000, "buyPrice not set");
+      //let buyPrice = await expInstance.buyPrice.call();
+      //assert.equal(buyPrice.toNumber(), 1000000000000000000, "buyPrice not set");
     });
 
     it("should be possible to buy 1 TALAO for 1 ETH", async() => {
@@ -723,5 +726,78 @@ contract('EmindhubCrowdsale', function(accounts) {
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
     });
 
+    it("sell sell sell sell", async() => {
+      let ethBalanceUser1;
+      let ethBalanceUser2;
+      let userBalance;
+      ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
+      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
+      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
+      ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
+      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
+      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
+      ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
+      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
+      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
+      ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
+      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
+      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
+      ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
+      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
+      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
+      ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
+      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
+      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
+    });
+
+    it("should be possible to get ether refill", async() => {
+      let tokensUser = await expInstance.balanceOf.call(accounts[5]);
+      console.log(tokensUser);
+      let balanceUser5 = await web3.eth.getBalance(accounts[5]);
+      let toSend = balanceUser5 - web3.toWei("4", "finney");
+      await web3.eth.sendTransaction({from:accounts[5], to:accounts[4], value: toSend});
+      let ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
+      console.log(ethBalanceUser1);
+      await expInstance.transfer.sendTransaction(accounts[3], "1000000000000000000", {from: accounts[5], gasPrice:1});
+      let ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
+      console.log(ethBalanceUser2);
+      assert.isAbove(ethBalanceUser2, web3.toWei("50", "finney"));
+      assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber(), "refill did not happen");
+    });
+
+    it("should be possible to transfer tokens endlessly", async() => {
+      await expInstance.transfer.sendTransaction(accounts[9], "10000000000000000000000", {from: accounts[3]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await expInstance.transfer.sendTransaction(accounts[9], "10000000000000000000000", {from: accounts[3]});
+    });
   });
 });

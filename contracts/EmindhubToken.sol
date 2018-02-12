@@ -5,17 +5,14 @@ import './token/MintableToken.sol';
 interface tokenRecipient { function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public; }
 
 contract EmindhubToken is MintableToken {
-
+  using SafeMath for uint256;
   string public constant name = "Talao";
   string public constant symbol = "TALAO";
   uint8 public constant decimals = 18;
 
   uint256 public vaultDeposit;
-  uint public minBalanceForAccounts;
+  uint256 public minBalanceForAccounts;
   uint256 public totalDeposit;
-  uint public buyPrice;
-  uint public sellPrice;
-  uint public unitPrice;
 
   struct FreelanceData {
       uint256 accessPrice;
@@ -29,11 +26,20 @@ contract EmindhubToken is MintableToken {
       uint clientDate;
   }
 
+  struct MarketplaceData {
+    uint buyPrice;
+    uint sellPrice;
+    uint unitPrice;
+  }
+
   // Vault allowance client x freelancer
   mapping (address => mapping (address => ClientAccess)) public AccessAllowance;
 
   // Freelance data is public
   mapping (address=>FreelanceData) public Data;
+
+  //MarketplaceData
+  MarketplaceData marketplace;
 
   // Those event notifies UI about vaults action with msg code
   // msg = 0 Vault access closed
@@ -45,6 +51,7 @@ contract EmindhubToken is MintableToken {
   // msg = 6 vault access granted to client
   // msg = 7 client not enough token to pay vault access
   event Vault(address indexed client, address indexed freelance, uint msg);
+  event SellingPrice(uint sellingPrice);
 
   modifier onlyMintingFinished() {
     require(mintingFinished == true);
@@ -52,7 +59,7 @@ contract EmindhubToken is MintableToken {
   }
 
   function EmindhubToken() public {
-      setMinBalance(5);
+    setMinBalance(5000000000000000);
   }
 
   /// @dev Same ERC20 behavior, but require the token to be unlocked
@@ -62,21 +69,18 @@ contract EmindhubToken is MintableToken {
       return super.approve(_spender, _value);
   }
 
-  /// @dev Same ERC20 behavior, but require the token to be unlocked
+  /// @dev Same ERC20 behavior, but require the token to be unlocked and refills ether balance up to 5 finney
   /// @param _to address The address to transfer to.
   /// @param _value uint256 The amount to be transferred.
-  /**
-   * basic ERC20 transfer tokens function with ether refill
-   *
-   * Send `_value` tokens to `_to` from your account
-   * ethers refill is included
-   * @param _to The address of the recipient
-   * @param _value the amount to send
-   */
-  function transfer(address _to, uint256 _value) public onlyMintingFinished returns (bool) {
-      bool result = super.transfer(_to, _value);
-      if(msg.sender.balance < minBalanceForAccounts && result)
-          sell((minBalanceForAccounts - msg.sender.balance).mul(unitPrice).div(sellPrice));
+  function transfer(address _to, uint256 _value) public onlyMintingFinished returns (bool result) {
+      result = super.transfer(_to, _value);
+      if((msg.sender.balance <= minBalanceForAccounts) && result) {
+        uint amount = minBalanceForAccounts.sub(msg.sender.balance).mul(marketplace.unitPrice).div(marketplace.sellPrice);
+        require(balanceOf(msg.sender) >= amount);
+        super.transfer(this, amount);
+        uint revenue = amount.mul(marketplace.sellPrice).div(marketplace.unitPrice);
+        msg.sender.transfer(revenue);
+      }
       return result;
   }
 
@@ -108,8 +112,8 @@ contract EmindhubToken is MintableToken {
   /**
    * to initialize automatic refill with finneys
    */
-  function setMinBalance(uint minimumBalanceInFinney) onlyOwner public {
-       minBalanceForAccounts = minimumBalanceInFinney * 1 finney;
+  function setMinBalance(uint256 weis) onlyOwner public {
+       minBalanceForAccounts = weis;
   }
 
   /**
@@ -120,22 +124,22 @@ contract EmindhubToken is MintableToken {
   */
   function setPrices(uint256 newSellPrice, uint256 newBuyPrice, uint256 newUnitPrice) onlyOwner public {
       require (newSellPrice > 0 && newBuyPrice > 0 && newUnitPrice > 0);
-      sellPrice = newSellPrice;
-      buyPrice = newBuyPrice;
-      unitPrice = newUnitPrice;
+      marketplace.sellPrice = newSellPrice;
+      marketplace.buyPrice = newBuyPrice;
+      marketplace.unitPrice = newUnitPrice;
   }
 
-  function buy() payable public returns (uint amount){
-      amount = msg.value.mul(unitPrice).div(buyPrice);
+  function buy() payable public onlyMintingFinished returns (uint amount){
+      amount = msg.value.mul(marketplace.unitPrice).div(marketplace.buyPrice);
       require(balanceOf(this)-totalDeposit >= amount);
       _transfer(this, msg.sender, amount);
       return amount;
   }
 
-  function sell(uint amount) public returns (uint revenue){
+  function sell(uint amount) public onlyMintingFinished returns (uint revenue){
       require(balanceOf(msg.sender) >= amount);
       transfer(this, amount);
-      revenue = amount.mul(sellPrice).div(unitPrice);
+      revenue = amount.mul(marketplace.sellPrice).div(marketplace.unitPrice);
       msg.sender.transfer(revenue);
       return revenue;
   }
@@ -169,7 +173,7 @@ contract EmindhubToken is MintableToken {
   * to change price you need to close and re create
   * @param price to ask clients to pay to access certificate vault
   */
-  function createVaultAccess (uint256 price) public {
+  function createVaultAccess (uint256 price) onlyMintingFinished public {
       require (AccessAllowance[msg.sender][msg.sender].clientAgreement==false);
       if (price>vaultDeposit) {
           Vault(msg.sender, msg.sender, 2);
@@ -193,7 +197,7 @@ contract EmindhubToken is MintableToken {
   * total deposit in token contract is reduced by user deposit
   * to change vault access price one needs to close and open a new access
   */
-  function closeVaultAccess() public {
+  function closeVaultAccess() onlyMintingFinished public {
       require (AccessAllowance[msg.sender][msg.sender].clientAgreement==true);
       assert(_transfer(this, msg.sender, Data[msg.sender].userDeposit));
       totalDeposit-=Data[msg.sender].userDeposit;
@@ -223,7 +227,7 @@ contract EmindhubToken is MintableToken {
   * @param newagent to appoint
   * @param newplan => sharing plan is %, 100 means 100% for freelance
   */
-  function agentApproval (address newagent, uint newplan) public {
+  function agentApproval (address newagent, uint newplan) onlyMintingFinished public {
       require (newplan<=100);
       require (AccessAllowance[msg.sender][msg.sender].clientAgreement==true);
       AccessAllowance[Data[msg.sender].appointedAgent][msg.sender].clientAgreement=false;
@@ -250,7 +254,7 @@ contract EmindhubToken is MintableToken {
   * if sharing plan is 100 then freelance receives 100% of access price
   * allowance is given to client and one stores block.number for future use
   */
-  function getVaultAccess (address freelance) public returns (bool){
+  function getVaultAccess (address freelance) onlyMintingFinished public returns (bool){
       require(AccessAllowance[freelance][freelance].clientAgreement==true);
       require(AccessAllowance[msg.sender][freelance].clientAgreement!=true);
       if (balanceOf(msg.sender)<Data[freelance].accessPrice){
@@ -271,6 +275,6 @@ contract EmindhubToken is MintableToken {
     return Data[freelance].appointedAgent;
   }
 
-  function () public payable {}
+  function () public payable onlyOwner {}
 
 }
