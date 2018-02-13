@@ -8,7 +8,7 @@ import '../ownership/Ownable.sol';
  * @title ProgressiveIndividualCappedCrowdsale
  * @dev Extension of Crowdsale with a progressive individual cap
  * @dev This contract is not made for crowdsale superior to 256 * TIME_PERIOD_IN_SEC
- * @author Request.network
+ * @author Request.network ; some modifications by Blockchain Partner
  */
 contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrowdsale {
 
@@ -41,7 +41,7 @@ contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrow
     }
 
     /**
-     * @dev Set the individual cap for the first day. This function can not be called withing the 24h before the sale for security reasons
+     * @dev Set the individual cap for the first day. Removed 24h limit from original contract
      * @param _baseEthCapPerAddress base cap in wei
      */
     function setBaseEthCapPerAddress(uint256 _baseEthCapPerAddress)

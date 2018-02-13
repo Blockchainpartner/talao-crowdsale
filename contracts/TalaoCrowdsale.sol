@@ -1,0 +1,328 @@
+pragma solidity ^0.4.18;
+
+// 1519025365, 1519026365, 1520025365, "1000000000000000000000", "5000000000000000000000", "20000000000000000000000", "0xcf09f36227aa07e3318fa57a16b453d29ecf786d"
+
+import './TalaoToken.sol';
+import './crowdsale/ProgressiveIndividualCappedCrowdsale.sol';
+import './token/TokenTimelock.sol';
+import './token/TokenVesting.sol';
+
+/**
+ * @title TalaoCrowdsale
+ * @dev This contract handles the presale and the crowdsale of the Talao platform.
+ * @author Blockchain Partner
+ */
+contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
+  using SafeMath for uint256;
+
+  uint256 public weiRaisedPreSale;
+  uint256 public presaleCap;
+  uint256 public startGeneralSale;
+
+  uint256 public presaleBonus;
+  uint256 public generalRate;
+  uint256 public dateOfBonusRelease;
+
+  // TBD : need final addresses
+  address public constant reserveWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
+  address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7047;
+  address public constant foundersWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7048;
+  address public constant futureTokenOwner = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7049;
+
+  uint256 public constant cliffTeamTokensRelease = 1 years;
+  uint256 public constant lockTeamTokens = 2 years;
+  uint256 public constant futureRoundTokensRelease = 3 years;
+
+  uint256 public baseEthCapPerAddress = 3 ether;
+
+  mapping (address => address) public timelockedTokensContracts;
+
+  mapping (address => bool) public whiteListedAddress;
+  mapping (address => bool) public whiteListedAddressPresale;
+
+  /**
+  * @dev Creates the crowdsale. Set starting dates, ending date, caps and wallet. Set the date of presale bonus release.
+  * @param _startDate start of the presale (EPOCH format)
+  * @param _startGeneralSale start of the crowdsale (EPOCH format)
+  * @param _endDate end of the crowdsale (EPOCH format)
+  * @param _goal soft cap
+  * @param _presaleCap hard cap of the presale
+  * @param _cap global hard cap
+  * @param _generalRate number of tokens for 1 ether
+  * @param _presaleBonus number of tokens for 1 ether in presale in addition of the general rate
+  * @param _wallet address receiving ether if sale is successful
+  **/
+  function TalaoCrowdsale(uint256 _startDate, uint256 _startGeneralSale, uint256 _endDate,
+                          uint256 _goal, uint256 _presaleCap, uint256 _cap, uint256 _generalRate,
+                          uint256 _presaleBonus, address _wallet)
+      public
+      CappedCrowdsale(_cap)
+      FinalizableCrowdsale()
+      RefundableCrowdsale(_goal)
+      Crowdsale(_startDate, _endDate, _wallet)
+      ProgressiveIndividualCappedCrowdsale(baseEthCapPerAddress, _startGeneralSale)
+  {
+      require(_goal <= _cap);
+      require(_startGeneralSale > _startDate);
+      require(_endDate > _startGeneralSale);
+      require(_presaleCap > 0);
+      require(_presaleCap < _cap);
+
+      startGeneralSale = _startGeneralSale;
+      presaleCap = _presaleCap;
+      dateOfBonusRelease = endTime + 90 days;
+      generalRate = _generalRate;
+      presaleBonus = _presaleBonus;
+  }
+
+  /**
+  * @dev Creates the talao token.
+  * @return the TalaoToken address
+  **/
+  function createTokenContract()
+      internal
+      returns (MintableToken)
+  {
+      return new TalaoToken();
+  }
+
+  /**
+  * @dev Checks if the sender is whitelisted for the presale.
+  **/
+  modifier onlyPresaleWhitelisted()
+  {
+      require(isWhitelistedPresale(msg.sender));
+      _;
+  }
+
+  /**
+  * @dev Checks if the sender is whitelisted for the crowdsale.
+  **/
+  modifier onlyWhitelisted()
+  {
+      require(isWhitelisted(msg.sender) || isWhitelistedPresale(msg.sender));
+      _;
+  }
+
+  /**
+   * @dev Whitelists an array of users for the crowdsale.
+   * @param _users the users to be whitelisted
+   */
+  function whitelistAddresses(address[] _users)
+      public
+      onlyOwner
+  {
+      for(uint i = 0 ; i < _users.length ; i++) {
+        whiteListedAddress[_users[i]] = true;
+      }
+  }
+
+  /**
+   * @dev Removes a user from the crowdsale whitelist.
+   * @param _user the user to be removed from the crowdsale whitelist
+   */
+  function unwhitelistAddress(address _user)
+      public
+      onlyOwner
+  {
+      whiteListedAddress[_user] = false;
+  }
+
+  /**
+   * @dev Whitelists an array of users for the presale.
+   * @param _users the users to be whitelisted
+   */
+  function whitelistAddressesPresale(address[] _users)
+      public
+      onlyOwner
+  {
+      for(uint i = 0 ; i < _users.length ; i++) {
+        whiteListedAddressPresale[_users[i]] = true;
+      }
+  }
+
+  /**
+   * @dev Removes a user from the presale whitelist.
+   * @param _users the user to be removed from the presale whitelist
+   */
+  function unwhitelistAddressPresale(address _users)
+      public
+      onlyOwner
+  {
+      whiteListedAddressPresale[_users] = false;
+  }
+
+  /**
+   * @dev Mints tokens corresponding to the transaction value for a whitelisted user during the crowdsale.
+   * @param beneficiary the user wanting to buy tokens
+   */
+  function buyTokens(address beneficiary)
+      public
+      payable
+      onlyWhitelisted
+  {
+      require(beneficiary != 0x0);
+      require(validPurchase());
+
+      uint256 weiAmount = msg.value;
+      uint256 tokens = weiAmount.mul(generalRate);
+      weiRaised = weiRaised.add(weiAmount);
+
+      token.mint(beneficiary, tokens);
+      TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+      forwardFunds();
+  }
+
+  /**
+   * @dev Mints tokens corresponding to the transaction value for a whitelisted user during the presale.
+   *      Presale bonus is timelocked.
+   * @param beneficiary the user wanting to buy tokens
+   */
+  function buyTokensPresale(address beneficiary)
+      public
+      payable
+      onlyPresaleWhitelisted
+  {
+      require(beneficiary != 0x0);
+      require(validPurchasePresale());
+
+      // minting tokens at general rate because these tokens are not timelocked
+      uint256 weiAmount = msg.value;
+      uint256 tokens = weiAmount.mul(generalRate);
+      token.mint(beneficiary, tokens);
+
+      // checking if a timelock contract has been already created (not the first presale investment)
+      // creating a timelock contract if none exists
+      if(timelockedTokensContracts[msg.sender] == 0) {
+        address timelockContract = new TokenTimelock(token, msg.sender, dateOfBonusRelease);
+        timelockedTokensContracts[msg.sender] = timelockContract;
+      }
+
+      // minting timelocked tokens ; balance goes to the timelock contract
+      uint256 timelockedTokens = weiAmount.mul(presaleBonus);
+      token.mint(timelockedTokensContracts[msg.sender], timelockedTokens);
+      weiRaisedPreSale = weiRaisedPreSale.add(weiAmount);
+
+      TokenPurchase(msg.sender, beneficiary, weiAmount, (tokens + timelockedTokens));
+      forwardFunds();
+  }
+
+  /**
+   * @dev Overriding the finalization method to add minting for founders/team/reserve if soft cap is reached.
+   */
+  function finalization()
+      internal
+  {
+      if (goalReached()) {
+        // Vesting for founders ; not revocable
+        // this will change to 4 static addresses TBD
+        uint cliffDate = now.add(cliffTeamTokensRelease);
+        uint unlockDate = now.add(lockTeamTokens);
+        address lockedFoundersTokensWallet = new TokenVesting(foundersWallet, now, cliffDate, unlockDate, false);
+        timelockedTokensContracts[foundersWallet] = lockedFoundersTokensWallet;
+        token.mint(lockedFoundersTokensWallet, 15000000000000000000000000);
+
+        // tokens reserve for advisors, bounty and employees : TBD token number ; no timelock
+        token.mint(reserveWallet, 15000000000000000000000000);
+        uint dateOfFutureRoundRelease = now.add(futureRoundTokensRelease);
+        address lockedRoundsTokensWallet = new TokenTimelock(token, futureRoundWallet, dateOfFutureRoundRelease);
+        timelockedTokensContracts[futureRoundWallet] = lockedRoundsTokensWallet;
+
+        // mint remaining tokens (should be at least 30M) to be timelocked for future round(s)
+        uint256 totalSupply = token.totalSupply();
+        uint256 maxSupply = 100000000000000000000000000;
+        uint256 toMint = maxSupply.sub(totalSupply);
+        token.mint(lockedRoundsTokensWallet, toMint);
+        token.finishMinting();
+
+        // give the token ownership to the crowdsale owner for marketplace and vault purposes
+        token.transferOwnership(owner);
+      }
+      // if soft cap not reached ; vault opens for refunds
+      super.finalization();
+  }
+
+  /**
+  * @dev Fallback function redirecting to buying tokens functions depending on the time period.
+  **/
+  function ()
+      external
+      payable
+  {
+      if (validPurchasePresale()){
+        buyTokensPresale(msg.sender);
+      } else {
+        buyTokens(msg.sender);
+      }
+  }
+
+  /**
+  * @dev Checks if the crowdsale purchase is valid: correct time, value and hard cap not reached.
+  *      Calls ProgressiveIndividualCappedCrowdsale's validPurchase to get individual cap.
+  * @return true if all criterias are satisfied ; false otherwise
+  **/
+  function validPurchase()
+      internal
+      returns (bool)
+  {
+      bool withinPeriod = now >= startGeneralSale && now <= endTime;
+      bool nonZeroPurchase = msg.value != 0;
+      uint256 totalWeiRaised = weiRaisedPreSale.add(weiRaised);
+      bool withinCap = totalWeiRaised.add(msg.value) <= cap;
+      return withinCap && withinPeriod && nonZeroPurchase && super.validPurchase();
+  }
+
+  /**
+  * @dev Checks if the presale purchase is valid: correct time, value and presale hard cap not reached.
+  * @return true if all criterias are satisfied ; false otherwise
+  **/
+  function validPurchasePresale()
+      internal
+      constant
+      returns (bool)
+  {
+      // contribution minimum TBD
+      bool withinPeriod = now >= startTime && now < startGeneralSale;
+      bool nonZeroPurchase = msg.value != 0;
+      bool withinCap = weiRaisedPreSale.add(msg.value) <= presaleCap;
+      return withinPeriod && nonZeroPurchase && withinCap;
+  }
+
+  /**
+  * @dev Override of the goalReached function in order to add presale weis to crowdsale weis and check if the total amount has reached the soft cap.
+  * @return true if soft cap has been reached ; false otherwise
+  **/
+  function goalReached()
+      public
+      constant
+      returns (bool)
+  {
+      uint256 totalWeiRaised = weiRaisedPreSale.add(weiRaised);
+      return totalWeiRaised >= goal || super.goalReached();
+  }
+
+  /**
+  * @dev Check if the user is whitelisted for the crowdsale.
+  * @return true if user is whitelisted ; false otherwise
+  **/
+  function isWhitelisted(address _user)
+      public
+      constant
+      returns (bool)
+  {
+      return whiteListedAddress[_user];
+  }
+
+  /**
+  * @dev Check if the user is whitelisted for the presale.
+  * @return true if user is whitelisted ; false otherwise
+  **/
+  function isWhitelistedPresale(address _user)
+      public
+      constant
+      returns (bool)
+  {
+      return whiteListedAddressPresale[_user];
+  }
+
+}
