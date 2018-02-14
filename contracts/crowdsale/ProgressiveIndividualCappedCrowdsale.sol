@@ -37,7 +37,8 @@ contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrow
         require(tx.gasprice <= GAS_LIMIT_IN_WEI);
         uint ethCapPerAddress = getCurrentEthCapPerAddress();
         participated[msg.sender] = participated[msg.sender].add(msg.value);
-        return participated[msg.sender] <= ethCapPerAddress;
+        bool enough = participated[msg.sender] >= 1 ether;
+        return participated[msg.sender] <= ethCapPerAddress && enough;
     }
 
     /**

@@ -19,6 +19,8 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   uint256 public presaleCap;
   uint256 public startGeneralSale;
 
+  mapping (address => uint) public presaleParticipation;
+
   uint256 public presaleBonus;
   uint256 public generalRate;
   uint256 public dateOfBonusRelease;
@@ -26,12 +28,17 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   // TBD : need final addresses
   address public constant reserveWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
   address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7047;
-  address public constant foundersWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7048;
+  address public constant advisorsWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7048;
   address public constant futureTokenOwner = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7049;
+  address public constant foundersWallet1 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7050;
+  address public constant foundersWallet2 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7051;
+  address public constant foundersWallet3 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7052;
+  address public constant shareholdersWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7053;
 
   uint256 public constant cliffTeamTokensRelease = 1 years;
   uint256 public constant lockTeamTokens = 2 years;
-  uint256 public constant futureRoundTokensRelease = 3 years;
+  uint256 public constant futureRoundTokensRelease = 1 years;
+  uint256 public constant presaleBonusLock = 90 days;
 
   uint256 public baseEthCapPerAddress = 3 ether;
 
@@ -70,7 +77,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
       startGeneralSale = _startGeneralSale;
       presaleCap = _presaleCap;
-      dateOfBonusRelease = endTime + 90 days;
+      dateOfBonusRelease = endTime + presaleBonusLock;
       generalRate = _generalRate;
       presaleBonus = _presaleBonus;
   }
@@ -214,23 +221,38 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       internal
   {
       if (goalReached()) {
-        // Vesting for founders ; not revocable
-        // this will change to 4 static addresses TBD
         uint cliffDate = now.add(cliffTeamTokensRelease);
         uint unlockDate = now.add(lockTeamTokens);
-        address lockedFoundersTokensWallet = new TokenVesting(foundersWallet, now, cliffDate, unlockDate, false);
-        timelockedTokensContracts[foundersWallet] = lockedFoundersTokensWallet;
-        token.mint(lockedFoundersTokensWallet, 15000000000000000000000000);
 
-        // tokens reserve for advisors, bounty and employees : TBD token number ; no timelock
-        token.mint(reserveWallet, 15000000000000000000000000);
+        // advisors tokens : 3M ; 1 year cliff, vested for another year
+        address lockedAdvisorsTokensWallet = new TokenVesting(advisorsWallet, now, cliffDate, unlockDate, false);
+        timelockedTokensContracts[advisorsWallet] = lockedAdvisorsTokensWallet;
+        token.mint(lockedAdvisorsTokensWallet, 3000000000000000000000000);
+
+        // Vesting for founders ; not revocable ; 1 year cliff, vested for another year
+        address lockedFoundersTokensWallet1 = new TokenVesting(foundersWallet1, now, cliffDate, unlockDate, false);
+        timelockedTokensContracts[foundersWallet1] = lockedFoundersTokensWallet1;
+        token.mint(lockedFoundersTokensWallet1, 4000000000000000000000000);
+        address lockedFoundersTokensWallet2 = new TokenVesting(foundersWallet2, now, cliffDate, unlockDate, false);
+        timelockedTokensContracts[foundersWallet2] = lockedFoundersTokensWallet2;
+        token.mint(lockedFoundersTokensWallet2, 4000000000000000000000000);
+        address lockedFoundersTokensWallet3 = new TokenVesting(foundersWallet3, now, cliffDate, unlockDate, false);
+        timelockedTokensContracts[foundersWallet3] = lockedFoundersTokensWallet3;
+        token.mint(lockedFoundersTokensWallet3, 4000000000000000000000000);
+
+        // talao shareholders & employees
+        token.mint(shareholdersWallet, 6000000000000000000000000);
+
+        // tokens reserve for talent ambassador, bounty and cash reserve : 29M tokens ; no timelock
+        token.mint(reserveWallet, 29000000000000000000000000);
+
+        // mint remaining tokens out of 150M to be timelocked for future round(s)
         uint dateOfFutureRoundRelease = now.add(futureRoundTokensRelease);
         address lockedRoundsTokensWallet = new TokenTimelock(token, futureRoundWallet, dateOfFutureRoundRelease);
         timelockedTokensContracts[futureRoundWallet] = lockedRoundsTokensWallet;
 
-        // mint remaining tokens (should be at least 30M) to be timelocked for future round(s)
         uint256 totalSupply = token.totalSupply();
-        uint256 maxSupply = 100000000000000000000000000;
+        uint256 maxSupply = 150000000000000000000000000;
         uint256 toMint = maxSupply.sub(totalSupply);
         token.mint(lockedRoundsTokensWallet, toMint);
         token.finishMinting();
@@ -278,14 +300,14 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   **/
   function validPurchasePresale()
       internal
-      constant
       returns (bool)
   {
-      // contribution minimum TBD
+      presaleParticipation[msg.sender] = presaleParticipation[msg.sender].add(msg.value);
+      bool enough = presaleParticipation[msg.sender] >= 100 ether;
       bool withinPeriod = now >= startTime && now < startGeneralSale;
       bool nonZeroPurchase = msg.value != 0;
       bool withinCap = weiRaisedPreSale.add(msg.value) <= presaleCap;
-      return withinPeriod && nonZeroPurchase && withinCap;
+      return withinPeriod && nonZeroPurchase && withinCap && enough;
   }
 
   /**
