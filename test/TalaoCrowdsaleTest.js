@@ -51,16 +51,16 @@ contract('TalaoCrowdsale', function(accounts) {
       assert.equal(instanceWallet, wallet);
     });
     it('should instanciate EXP Token', async () => {
-      let expAddress = await TalaoCrowdsaleInstance.token.call();
-      let expInstance = TalaoToken.at(expAddress);
-      let expSymbol = await expInstance.symbol.call();
+      let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+      let talaoInstance = TalaoToken.at(talaoAddress);
+      let expSymbol = await talaoInstance.symbol.call();
       assert.equal(expSymbol, "TALAO");
     });
   });
 
   describe('Presale Features', () => {
     let TalaoCrowdsaleInstance;
-    let expInstance;
+    let talaoInstance;
     // start and end timestamps where investments are allowed (both inclusive)
     let startPresale = latestTime() + duration.minutes(1);
     let startSale = latestTime() + duration.days(10);
@@ -82,8 +82,8 @@ contract('TalaoCrowdsale', function(accounts) {
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
       TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,generalRate,presaleBonus,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
-      let expAddress = await TalaoCrowdsaleInstance.token.call();
-      expInstance = TalaoToken.at(expAddress);
+      let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+      talaoInstance = TalaoToken.at(talaoAddress);
     });
 
 
@@ -103,12 +103,12 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "100000000000000000000", gas: 4700000});
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: 1, gas: 4700000});
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[2], to: TalaoCrowdsaleInstance.address, value: "100000000000000000000", gas: 4700000}).should.be.rejectedWith(revert);
-      let balance = await expInstance.balanceOf(accounts[1]);
+      let balance = await talaoInstance.balanceOf(accounts[1]);
       // token balance should be generalRate
       assert.equal(balance, 123600000000000000001236);
       // check if a vestingContract is available and has the correct balance
       let timelockContract = await TalaoCrowdsaleInstance.timelockedTokensContracts.call(accounts[1]);
-      let lockedBalance = await expInstance.balanceOf(timelockContract);
+      let lockedBalance = await talaoInstance.balanceOf(timelockContract);
       assert.equal(lockedBalance, 40700000000000000000407);
     });
 
@@ -118,7 +118,7 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "100000000000000000000", gas: 4700000});
       await increaseTimeTo(startSale+1);
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1000000000000000000", gas: 4700000, gasPrice: 1});
-      let balance = await expInstance.balanceOf(accounts[1]);
+      let balance = await talaoInstance.balanceOf(accounts[1]);
       assert.equal(balance, 124836000000000000000000);
     });
 
@@ -132,12 +132,12 @@ contract('TalaoCrowdsale', function(accounts) {
       await increaseTimeTo(startPresale+1);
       await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]});
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "18259000000000000000000", gas: 4700000});
-      let balance = await expInstance.balanceOf(accounts[1]);
+      let balance = await talaoInstance.balanceOf(accounts[1]);
       // should be 22.568124M tokens
       assert.equal(balance, 22568124000000000000000000);
       // check if a vestingContract is available and has the correct balance
       let timelockContract = await TalaoCrowdsaleInstance.timelockedTokensContracts.call(accounts[1]);
-      let lockedBalance = await expInstance.balanceOf(timelockContract);
+      let lockedBalance = await talaoInstance.balanceOf(timelockContract);
       // should be 7.431413M tokens
       assert.equal(lockedBalance, 7431413000000000000000000);
     });
@@ -148,6 +148,8 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "7353000000000000000000", gas: 4700000});
       await increaseTimeTo(endTime+1);
       await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
+      let tokenSupply = await talaoInstance.totalSupply.call();
+      assert.equal(tokenSupply.toNumber(), web3.toWei("150000000"));
       let isFinalized = await TalaoCrowdsaleInstance.isFinalized();
       assert.isTrue(isFinalized);
       let vaultAddress = await TalaoCrowdsaleInstance.vault();
@@ -160,7 +162,7 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]})
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "7353000000000000000000", gas: 4700000});
 
-      await expInstance.transfer(accounts[3],1000,{from:accounts[1]}).should.be.rejectedWith(revert);
+      await talaoInstance.transfer(accounts[3],1000,{from:accounts[1]}).should.be.rejectedWith(revert);
     });
 
     it('should be able to transfer tokens after the sale has been finalized', async () => {
@@ -169,8 +171,10 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "7353000000000000000000", gas: 4700000});
       await increaseTimeTo(endTime+1);
       await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
-      await expInstance.transfer(accounts[3],1000,{from:accounts[1]});
-      let balance = await expInstance.balanceOf(accounts[3]);
+      let tokenSupply = await talaoInstance.totalSupply.call();
+      assert.equal(tokenSupply.toNumber(), web3.toWei("150000000"));
+      await talaoInstance.transfer(accounts[3],1000,{from:accounts[1]});
+      let balance = await talaoInstance.balanceOf(accounts[3]);
       assert.equal(balance,1000);
     });
 
@@ -178,7 +182,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
   describe('Sale Features', () => {
     let TalaoCrowdsaleInstance;
-    let expInstance;
+    let talaoInstance;
     // start and end timestamps where investments are allowed (both inclusive)
     let startPresale = latestTime() + duration.minutes(1);
     let startSale = latestTime() + duration.days(10);
@@ -194,8 +198,8 @@ contract('TalaoCrowdsale', function(accounts) {
         startSale = latestTime() + duration.days(10);
         endTime = latestTime() + duration.days(30);
         TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,generalRate,presaleBonus,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
-        let expAddress = await TalaoCrowdsaleInstance.token.call();
-        expInstance = TalaoToken.at(expAddress);
+        let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+        talaoInstance = TalaoToken.at(talaoAddress);
         await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), {from: accounts[0]})
       });
 
@@ -225,15 +229,16 @@ contract('TalaoCrowdsale', function(accounts) {
         assert.isTrue(await TalaoCrowdsaleInstance.goalReached.call());
         await increaseTimeTo(endTime+1);
         await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
-        let reserveBalance = await expInstance.balanceOf(reserveWallet);
-        let roundBalance = await expInstance.balanceOf(roundWallet);
+        let tokenSupply = await talaoInstance.totalSupply.call();
+        assert.equal(tokenSupply.toNumber(), web3.toWei("150000000"));
+        let reserveBalance = await talaoInstance.balanceOf(reserveWallet);
+        let roundBalance = await talaoInstance.balanceOf(roundWallet);
         let roundLockedWallet = await TalaoCrowdsaleInstance.timelockedTokensContracts.call(roundWallet);
-        let roundLockedBalance = await expInstance.balanceOf(roundLockedWallet);
+        let roundLockedBalance = await talaoInstance.balanceOf(roundLockedWallet);
         assert.equal(roundBalance.toNumber(), 0);
         // team should get 15M tokens, unlocked
         assert.equal(reserveBalance.toNumber(), web3.toWei("29000000"));
         // round should get above or equal 50 000 747 tokens, locked
-        console.log(roundLockedBalance.toNumber());
         assert.isAtLeast(roundLockedBalance.toNumber(), web3.toWei("50000747"));
       });
 
@@ -242,8 +247,8 @@ contract('TalaoCrowdsale', function(accounts) {
         await web3.eth.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1000000000000000000", gas: 4700000, gasPrice: 1});
         await increaseTimeTo(endTime+1);
         await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
-        let teamBalance = await expInstance.balanceOf(reserveWallet);
-        let roundBalance = await expInstance.balanceOf(roundWallet);
+        let teamBalance = await talaoInstance.balanceOf(reserveWallet);
+        let roundBalance = await talaoInstance.balanceOf(roundWallet);
         assert.equal(teamBalance.toNumber(), 0);
         assert.equal(roundBalance.toNumber(), 0);
       });
@@ -295,14 +300,16 @@ contract('TalaoCrowdsale', function(accounts) {
         await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "7353000000000000000000", gas: 4700000, gasPrice: 1});
         await increaseTimeTo(endTime+1);
         await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
-        let balance = await expInstance.balanceOf(accounts[1]);
+        let tokenSupply = await talaoInstance.totalSupply.call();
+        assert.equal(tokenSupply.toNumber(), web3.toWei("150000000"));
+        let balance = await talaoInstance.balanceOf(accounts[1]);
         let isFinalized = await TalaoCrowdsaleInstance.isFinalized();
         assert.isTrue(isFinalized);
-        let reserveBalance = await expInstance.balanceOf(reserveWallet);
+        let reserveBalance = await talaoInstance.balanceOf(reserveWallet);
         let foundersWallet1 = await TalaoCrowdsaleInstance.foundersWallet1.call();
-        let foundersWallet1Balance = await expInstance.balanceOf(foundersWallet1);
+        let foundersWallet1Balance = await talaoInstance.balanceOf(foundersWallet1);
         let roundLockedWallet = await TalaoCrowdsaleInstance.timelockedTokensContracts.call(roundWallet);
-        let roundLockedBalance = await expInstance.balanceOf(roundLockedWallet);
+        let roundLockedBalance = await talaoInstance.balanceOf(roundLockedWallet);
         // reserve should be 29M tokens, unlocked
         assert.equal(foundersWallet1Balance, 0);
         assert.equal(reserveBalance.toNumber(), web3.toWei("29000000"));
@@ -312,7 +319,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
   describe('Sale Whitelisting', () => {
     let TalaoCrowdsaleInstance;
-    let expInstance;
+    let talaoInstance;
     // start and end timestamps where investments are allowed (both inclusive)
     let startPresale = latestTime() + duration.minutes(1);
     let startSale = latestTime() + duration.days(10);
@@ -329,8 +336,8 @@ contract('TalaoCrowdsale', function(accounts) {
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
       TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,generalRate,presaleBonus,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
-      let expAddress = await TalaoCrowdsaleInstance.token.call();
-      expInstance = TalaoToken.at(expAddress);
+      let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+      talaoInstance = TalaoToken.at(talaoAddress);
     });
 
     it('should whitelist 200(full block) addresses', async () => {
@@ -348,7 +355,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
   describe('Sale Distribution', () => {
     let TalaoCrowdsaleInstance;
-    let expInstance;
+    let talaoInstance;
     // start and end timestamps where investments are allowed (both inclusive)
     let startPresale = latestTime() + duration.minutes(1);
     let startSale = latestTime() + duration.days(10);
@@ -363,8 +370,8 @@ contract('TalaoCrowdsale', function(accounts) {
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
       TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,generalRate,presaleBonus,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
-      let expAddress = await TalaoCrowdsaleInstance.token.call();
-      expInstance = TalaoToken.at(expAddress);
+      let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+      talaoInstance = TalaoToken.at(talaoAddress);
       await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), {from: accounts[0]});
       await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[2]), {from: accounts[0]});
     });
@@ -372,28 +379,28 @@ contract('TalaoCrowdsale', function(accounts) {
     it('should give 1236000000000000000000 Token at the startSale Block of the sale for 1000000000000000000 wei.', async () => {
       await increaseTimeTo(startSale);
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1000000000000000000" ,gas: 4700000, gasPrice: 1});
-      let balance = await expInstance.balanceOf(accounts[1]);
+      let balance = await talaoInstance.balanceOf(accounts[1]);
       assert.equal(balance, 1236000000000000000000);
     });
 
     it('should give 1236000000000000000001236 Token at the startSale of the sale for 1000000000000000000001 wei.', async () => {
       await increaseTimeTo(startSale+duration.days(19));
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1000000000000000000001", gas: 4700000, gasPrice: 1});
-      let balance = await expInstance.balanceOf(accounts[1]);
+      let balance = await talaoInstance.balanceOf(accounts[1]);
       assert.equal(balance, 1236000000000000000001236);
     });
 
     it('should give 1236000000000000000000000 Token at the startSale of the sale for 1000000000000000000000 wei.', async () => {
       await increaseTimeTo(startSale+duration.days(19));
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1000000000000000000000", gas: 4700000, gasPrice: 1});
-      let balance = await expInstance.balanceOf(accounts[1]);
+      let balance = await talaoInstance.balanceOf(accounts[1]);
       assert.equal(balance.toNumber(), 1236000000000000000000000);
     });
 
     it('should be able to buy everything', async () => {
       await increaseTimeTo(startSale+duration.days(19));
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "34440000000000000000000", gas: 4700000, gasPrice: 1});
-      let balance = await expInstance.balanceOf(accounts[1]);
+      let balance = await talaoInstance.balanceOf(accounts[1]);
       // should be 42.567840M
       assert.equal(balance, 42567840000000000000000000);
     });
@@ -401,7 +408,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
     describe('Individual caps', () => {
       let TalaoCrowdsaleInstance;
-      let expInstance;
+      let talaoInstance;
       // start and end timestamps where investments are allowed (both inclusive)
       let startPresale = latestTime() + duration.minutes(1);
       let startSale = latestTime() + duration.days(10);
@@ -416,8 +423,8 @@ contract('TalaoCrowdsale', function(accounts) {
         startSale = latestTime() + duration.days(10);
         endTime = latestTime() + duration.days(30);
         TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,generalRate,presaleBonus,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
-        let expAddress = await TalaoCrowdsaleInstance.token.call();
-        expInstance = TalaoToken.at(expAddress);
+        let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+        talaoInstance = TalaoToken.at(talaoAddress);
         await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), {from: accounts[0]});
         await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[2]), {from: accounts[0]});
       });
@@ -467,7 +474,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
   describe('Token features', () => {
     let TalaoCrowdsaleInstance;
-    let expInstance;
+    let talaoInstance;
     // start and end timestamps where investments are allowed (both inclusive)
     let startPresale = latestTime() + duration.minutes(1);
     let startSale = latestTime() + duration.days(10);
@@ -480,8 +487,8 @@ contract('TalaoCrowdsale', function(accounts) {
       startSale = latestTime() + duration.days(10);
       endSale = latestTime() + duration.days(30);
       TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,generalRate,presaleBonus,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
-      let expAddress = await TalaoCrowdsaleInstance.token.call();
-      expInstance = TalaoToken.at(expAddress);
+      let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+      talaoInstance = TalaoToken.at(talaoAddress);
       await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1], accounts[2], accounts[3], accounts[4], accounts[5], accounts[6]), {from: accounts[0]});
       await increaseTimeTo(startSale+duration.days(19));
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000000", gas: 4700000, gasPrice: 1});
@@ -497,68 +504,68 @@ contract('TalaoCrowdsale', function(accounts) {
     });
 
     it('token contract should be owned by accounts[0]', async () => {
-      let owner = await expInstance.owner.call();
+      let owner = await talaoInstance.owner.call();
       assert.equal(owner, accounts[0], "wrong owner");
     });
 
     it('should be possible to set vault deposit to 1 TALAO', async () => {
       await increaseTimeTo(endSale+duration.days(1));
-      await expInstance.setVaultDeposit.sendTransaction("10000000000000000000", {from: accounts[0]});
-      let vaultDeposit = await expInstance.vaultDeposit.call();
+      await talaoInstance.setVaultDeposit.sendTransaction("10000000000000000000", {from: accounts[0]});
+      let vaultDeposit = await talaoInstance.vaultDeposit.call();
       assert.equal(vaultDeposit, "10000000000000000000", "wrong vault deposit");
     });
 
     it('should be possible to create a vault access', async () => {
-      let totalDeposit1 = await expInstance.totalDeposit.call();
-      let userTokens1 = await expInstance.balanceOf.call(accounts[1]);
-      let balanceContract1 = await expInstance.balanceOf.call(expInstance.address);
-      await expInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]});
-      let totalDeposit2 = await expInstance.totalDeposit.call();
-      let balanceContract2 = await expInstance.balanceOf.call(expInstance.address);
-      let userTokens2 = await expInstance.balanceOf.call(accounts[1]);
+      let totalDeposit1 = await talaoInstance.totalDeposit.call();
+      let userTokens1 = await talaoInstance.balanceOf.call(accounts[1]);
+      let balanceContract1 = await talaoInstance.balanceOf.call(talaoInstance.address);
+      await talaoInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]});
+      let totalDeposit2 = await talaoInstance.totalDeposit.call();
+      let balanceContract2 = await talaoInstance.balanceOf.call(talaoInstance.address);
+      let userTokens2 = await talaoInstance.balanceOf.call(accounts[1]);
       assert.isAbove(totalDeposit2.toNumber(), totalDeposit1.toNumber(), "nothing deposed?");
       assert.isAbove(balanceContract2.toNumber(), balanceContract1.toNumber(), "no tokens received");
       assert.isAbove(userTokens1.toNumber(), userTokens2.toNumber(), "no tokens sent");
     });
 
     it('should not be possible to create a vault access twice', async () => {
-      await expInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]}).should.be.rejectedWith(revert);
+      await talaoInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]}).should.be.rejectedWith(revert);
     });
 
     it('should not be possible to create a vault access without tokens', async () => {
-      let totalDeposit1 = await expInstance.totalDeposit.call();
-      let balanceContract1 = await expInstance.balanceOf.call(expInstance.address);
-      await expInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[8]});
-      let totalDeposit2 = await expInstance.totalDeposit.call();
-      let balanceContract2 = await expInstance.balanceOf.call(expInstance.address);
+      let totalDeposit1 = await talaoInstance.totalDeposit.call();
+      let balanceContract1 = await talaoInstance.balanceOf.call(talaoInstance.address);
+      await talaoInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[8]});
+      let totalDeposit2 = await talaoInstance.totalDeposit.call();
+      let balanceContract2 = await talaoInstance.balanceOf.call(talaoInstance.address);
       assert.equal(totalDeposit1.toNumber(), totalDeposit2.toNumber(), "deposited something somehow");
       assert.equal(balanceContract2.toNumber(), balanceContract1.toNumber(), "no tokens received");
     });
 
     it("should be possible to appoint an agent", async() => {
-      await expInstance.agentApproval.sendTransaction(accounts[7], 90, {from: accounts[1]});
-      let newAgent = await expInstance.getFreelanceAgent.call(accounts[1]);
+      await talaoInstance.agentApproval.sendTransaction(accounts[7], 90, {from: accounts[1]});
+      let newAgent = await talaoInstance.getFreelanceAgent.call(accounts[1]);
       assert.equal(newAgent, accounts[7], "agent not appointed correctly");
     });
 
     it("should be possible to appoint a new agent", async() => {
-      await expInstance.agentApproval.sendTransaction(accounts[8], 90, {from: accounts[1]});
-      let newAgent = await expInstance.getFreelanceAgent.call(accounts[1]);
+      await talaoInstance.agentApproval.sendTransaction(accounts[8], 90, {from: accounts[1]});
+      let newAgent = await talaoInstance.getFreelanceAgent.call(accounts[1]);
       assert.equal(newAgent, accounts[8], "agent not appointed correctly");
     });
 
     it("should not be possible to appoint an agent without a vault", async() => {
-      await expInstance.agentApproval.sendTransaction(accounts[7], 90, {from: accounts[2]}).should.be.rejectedWith(revert);
+      await talaoInstance.agentApproval.sendTransaction(accounts[7], 90, {from: accounts[2]}).should.be.rejectedWith(revert);
     });
 
     it("should be possible to get access to a vault", async() => {
-      let balanceUser1 = await expInstance.balanceOf(accounts[3]);
-      let balanceFreelance1 = await expInstance.balanceOf(accounts[1]);
-      let balanceAgent1 = await expInstance.balanceOf(accounts[8]);
-      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[3]});
-      let balanceUser2 = await expInstance.balanceOf(accounts[3]);
-      let balanceFreelance2 = await expInstance.balanceOf(accounts[1]);
-      let balanceAgent2 = await expInstance.balanceOf(accounts[8]);
+      let balanceUser1 = await talaoInstance.balanceOf(accounts[3]);
+      let balanceFreelance1 = await talaoInstance.balanceOf(accounts[1]);
+      let balanceAgent1 = await talaoInstance.balanceOf(accounts[8]);
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[3]});
+      let balanceUser2 = await talaoInstance.balanceOf(accounts[3]);
+      let balanceFreelance2 = await talaoInstance.balanceOf(accounts[1]);
+      let balanceAgent2 = await talaoInstance.balanceOf(accounts[8]);
       assert.isAbove(balanceAgent2.toNumber(), balanceAgent1.toNumber(), "agent didn't receive its share");
       assert.isAbove(balanceUser1.toNumber(), balanceUser2.toNumber(), "user didn't send tokens");
       assert.isAbove(balanceFreelance2.toNumber(), balanceFreelance1.toNumber(), "freelance didn't receive its share");
@@ -568,64 +575,64 @@ contract('TalaoCrowdsale', function(accounts) {
     });
 
     it("should not be possible to get access to a vault without the right amount of tokens", async() => {
-      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[8]}).should.be.rejectedWith(revert);
-      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]});
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[8]}).should.be.rejectedWith(revert);
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]});
     });
 
     it("should not be possible to withdraw more than fees", async() => {
-      await expInstance.withdrawTalao.sendTransaction("10000000000000000000", {from: accounts[0]}).should.be.rejectedWith(revert);
+      await talaoInstance.withdrawTalao.sendTransaction("10000000000000000000", {from: accounts[0]}).should.be.rejectedWith(revert);
     });
 
     it("should be possible to withdraw tokens sent for other purposes", async() => {
-      await expInstance.transfer.sendTransaction(expInstance.address, "1000000000000000000", {from: accounts[5]})
-      await expInstance.withdrawTalao.sendTransaction("1000000000000000000", {from: accounts[0]});
+      await talaoInstance.transfer.sendTransaction(talaoInstance.address, "1000000000000000000", {from: accounts[5]})
+      await talaoInstance.withdrawTalao.sendTransaction("1000000000000000000", {from: accounts[0]});
     });
 
     it("should not be possible to ask access twice", async() => {
-      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]}).should.be.rejectedWith(revert);
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]}).should.be.rejectedWith(revert);
     });
 
     it("should be possible to close a vault", async() => {
-      let balanceFreelance1 = await expInstance.balanceOf(accounts[1]);
-      let totalDeposit1 = await expInstance.totalDeposit.call();
-      await expInstance.closeVaultAccess.sendTransaction({from:accounts[1]});
-      let totalDeposit2 = await expInstance.totalDeposit.call();
-      let balanceFreelance2 = await expInstance.balanceOf(accounts[1]);
+      let balanceFreelance1 = await talaoInstance.balanceOf(accounts[1]);
+      let totalDeposit1 = await talaoInstance.totalDeposit.call();
+      await talaoInstance.closeVaultAccess.sendTransaction({from:accounts[1]});
+      let totalDeposit2 = await talaoInstance.totalDeposit.call();
+      let balanceFreelance2 = await talaoInstance.balanceOf(accounts[1]);
       assert.isAbove(totalDeposit1.toNumber(), totalDeposit2.toNumber(), "total deposit did not change");
       assert.isAbove(balanceFreelance2.toNumber(), balanceFreelance1.toNumber(), "did not receive deposit");
     });
 
     it("should not be possible to access a closed vault", async() => {
-      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[5]}).should.be.rejectedWith(revert);
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[5]}).should.be.rejectedWith(revert);
     });
 
     it("should be possible to open a closed vault", async() => {
-      let totalDeposit1 = await expInstance.totalDeposit.call();
-      let userTokens1 = await expInstance.balanceOf.call(accounts[1]);
-      let balanceContract1 = await expInstance.balanceOf.call(expInstance.address);
-      await expInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]});
-      let totalDeposit2 = await expInstance.totalDeposit.call();
-      let balanceContract2 = await expInstance.balanceOf.call(expInstance.address);
-      let userTokens2 = await expInstance.balanceOf.call(accounts[1]);
+      let totalDeposit1 = await talaoInstance.totalDeposit.call();
+      let userTokens1 = await talaoInstance.balanceOf.call(accounts[1]);
+      let balanceContract1 = await talaoInstance.balanceOf.call(talaoInstance.address);
+      await talaoInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]});
+      let totalDeposit2 = await talaoInstance.totalDeposit.call();
+      let balanceContract2 = await talaoInstance.balanceOf.call(talaoInstance.address);
+      let userTokens2 = await talaoInstance.balanceOf.call(accounts[1]);
       assert.isAbove(totalDeposit2.toNumber(), totalDeposit1.toNumber(), "nothing deposed?");
       assert.isAbove(balanceContract2.toNumber(), balanceContract1.toNumber(), "no tokens received");
       assert.isAbove(userTokens1.toNumber(), userTokens2.toNumber(), "no tokens sent");
     });
 
     it("should be possible to appoint a new agent", async() => {
-      await expInstance.agentApproval.sendTransaction(accounts[8], 90, {from: accounts[1]});
-      let newAgent = await expInstance.getFreelanceAgent.call(accounts[1]);
+      await talaoInstance.agentApproval.sendTransaction(accounts[8], 90, {from: accounts[1]});
+      let newAgent = await talaoInstance.getFreelanceAgent.call(accounts[1]);
       assert.equal(newAgent, accounts[8], "agent not appointed correctly");
     });
 
     it("should be possible to get access to a reopened vault", async() => {
-      let balanceUser1 = await expInstance.balanceOf(accounts[6]);
-      let balanceFreelance1 = await expInstance.balanceOf(accounts[1]);
-      let balanceAgent1 = await expInstance.balanceOf(accounts[8]);
-      await expInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[6]});
-      let balanceUser2 = await expInstance.balanceOf(accounts[6]);
-      let balanceFreelance2 = await expInstance.balanceOf(accounts[1]);
-      let balanceAgent2 = await expInstance.balanceOf(accounts[8]);
+      let balanceUser1 = await talaoInstance.balanceOf(accounts[6]);
+      let balanceFreelance1 = await talaoInstance.balanceOf(accounts[1]);
+      let balanceAgent1 = await talaoInstance.balanceOf(accounts[8]);
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[6]});
+      let balanceUser2 = await talaoInstance.balanceOf(accounts[6]);
+      let balanceFreelance2 = await talaoInstance.balanceOf(accounts[1]);
+      let balanceAgent2 = await talaoInstance.balanceOf(accounts[8]);
       assert.isAbove(balanceAgent2.toNumber(), balanceAgent1.toNumber(), "agent didn't receive its share");
       assert.isAbove(balanceUser1.toNumber(), balanceUser2.toNumber(), "user didn't send tokens");
       assert.isAbove(balanceFreelance2.toNumber(), balanceFreelance1.toNumber(), "freelance didn't receive its share");
@@ -638,7 +645,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
   describe('Buy and sell TALAO', () => {
     let TalaoCrowdsaleInstance;
-    let expInstance;
+    let talaoInstance;
     // start and end timestamps where investments are allowed (both inclusive)
     let startPresale = latestTime() + duration.minutes(1);
     let startSale = latestTime() + duration.days(10);
@@ -651,8 +658,8 @@ contract('TalaoCrowdsale', function(accounts) {
       startSale = latestTime() + duration.days(10);
       endSale = latestTime() + duration.days(30);
       TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,generalRate,presaleBonus,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
-      let expAddress = await TalaoCrowdsaleInstance.token.call();
-      expInstance = TalaoToken.at(expAddress);
+      let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+      talaoInstance = TalaoToken.at(talaoAddress);
       await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1], accounts[2], accounts[3], accounts[4], accounts[5], accounts[6]), {from: accounts[0]});
       await increaseTimeTo(startSale+duration.days(19));
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000000", gas: 4700000, gasPrice: 1});
@@ -665,37 +672,37 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
       let finalized = await TalaoCrowdsaleInstance.isFinalized.call();
       assert.equal(finalized, true);
-      await expInstance.transfer.sendTransaction(expInstance.address, "10000000000000000000000", {from: accounts[6]});
-      await expInstance.sendTransaction({from: accounts[0], value:"100000000000000000000"});
-      //await expInstance.setMinBalance.sendTransaction("50000000000000000" ,{from: accounts[0]});
-      let minBalance = await expInstance.minBalanceForAccounts.call();
-      let balanceContract = await web3.eth.getBalance(expInstance.address);
+      await talaoInstance.transfer.sendTransaction(talaoInstance.address, "10000000000000000000000", {from: accounts[6]});
+      await talaoInstance.sendTransaction({from: accounts[0], value:"100000000000000000000"});
+      //await talaoInstance.setMinBalance.sendTransaction("50000000000000000" ,{from: accounts[0]});
+      let minBalance = await talaoInstance.minBalanceForAccounts.call();
+      let balanceContract = await web3.eth.getBalance(talaoInstance.address);
       assert.isAbove(balanceContract.toNumber(), 0, "no eth on the contract");
     });
 
     it("should be possible to set prices", async() => {
-      await expInstance.setPrices.sendTransaction("1000000000000000000", "1000000000000000000", "1000000000000000000", {from: accounts[0]});
-      //let buyPrice = await expInstance.buyPrice.call();
+      await talaoInstance.setPrices.sendTransaction("1000000000000000000", "1000000000000000000", "1000000000000000000", {from: accounts[0]});
+      //let buyPrice = await talaoInstance.buyPrice.call();
       //assert.equal(buyPrice.toNumber(), 1000000000000000000, "buyPrice not set");
     });
 
     it("should be possible to buy 1 TALAO for 1 ETH", async() => {
-      await expInstance.buy.sendTransaction({from: accounts[7], value:"1000000000000000000"});
-      let userBalance = await expInstance.balanceOf.call(accounts[7]);
+      await talaoInstance.buy.sendTransaction({from: accounts[7], value:"1000000000000000000"});
+      let userBalance = await talaoInstance.balanceOf.call(accounts[7]);
       assert.equal(userBalance.toNumber(), 1000000000000000000, "not a correct buy");
     });
 
     it("should be possible to buy 2 TALAO for 2 ETH", async() => {
-      await expInstance.buy.sendTransaction({from: accounts[8], value:"2000000000000000000"});
-      let userBalance = await expInstance.balanceOf.call(accounts[8]);
+      await talaoInstance.buy.sendTransaction({from: accounts[8], value:"2000000000000000000"});
+      let userBalance = await talaoInstance.balanceOf.call(accounts[8]);
       assert.equal(userBalance.toNumber(), 2000000000000000000, "not a correct buy");
     });
 
     it("should be possible to sell 1 TALAO for 1 ETH", async() => {
       let ethBalanceUser1 = await web3.eth.getBalance(accounts[7]);
-      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[7], gasPrice:1});
+      await talaoInstance.sell.sendTransaction("1000000000000000000", {from: accounts[7], gasPrice:1});
       let ethBalanceUser2 = await web3.eth.getBalance(accounts[7]);
-      let userBalance = await expInstance.balanceOf.call(accounts[7]);
+      let userBalance = await talaoInstance.balanceOf.call(accounts[7]);
       assert.equal(userBalance.toNumber(), 0, "not a correct sell");
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
     });
@@ -705,44 +712,44 @@ contract('TalaoCrowdsale', function(accounts) {
       let ethBalanceUser2;
       let userBalance;
       ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
-      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      await talaoInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
       ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
-      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      userBalance = await talaoInstance.balanceOf.call(accounts[5]);
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
       ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
-      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      await talaoInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
       ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
-      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      userBalance = await talaoInstance.balanceOf.call(accounts[5]);
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
       ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
-      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      await talaoInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
       ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
-      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      userBalance = await talaoInstance.balanceOf.call(accounts[5]);
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
       ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
-      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      await talaoInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
       ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
-      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      userBalance = await talaoInstance.balanceOf.call(accounts[5]);
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
       ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
-      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      await talaoInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
       ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
-      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      userBalance = await talaoInstance.balanceOf.call(accounts[5]);
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
       ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
-      await expInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
+      await talaoInstance.sell.sendTransaction("1000000000000000000", {from: accounts[5], gasPrice:1});
       ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
-      userBalance = await expInstance.balanceOf.call(accounts[5]);
+      userBalance = await talaoInstance.balanceOf.call(accounts[5]);
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber());
     });
 
     it("should be possible to get ether refill", async() => {
-      let tokensUser = await expInstance.balanceOf.call(accounts[5]);
+      let tokensUser = await talaoInstance.balanceOf.call(accounts[5]);
       let balanceUser5 = await web3.eth.getBalance(accounts[5]);
       let toSend = balanceUser5 - web3.toWei("4", "finney");
       await web3.eth.sendTransaction({from:accounts[5], to:accounts[4], value: toSend});
       let ethBalanceUser1 = await web3.eth.getBalance(accounts[5]);
-      await expInstance.transfer.sendTransaction(accounts[3], "1000000000000000000", {from: accounts[5], gasPrice:1});
+      await talaoInstance.transfer.sendTransaction(accounts[3], "1000000000000000000", {from: accounts[5], gasPrice:1});
       let ethBalanceUser2 = await web3.eth.getBalance(accounts[5]);
       assert.isAbove(ethBalanceUser2.toNumber(), web3.toWei("5", "finney"));
       assert.isAbove(ethBalanceUser2.toNumber(), ethBalanceUser1.toNumber(), "refill did not happen");
@@ -751,33 +758,33 @@ contract('TalaoCrowdsale', function(accounts) {
     it("should not get refill if balance >= 5 finney", async() => {
       let ethBalanceUser1 = await web3.eth.getBalance(accounts[4]);
       assert.isAbove(ethBalanceUser1.toNumber(), web3.toWei("5", "finney"));
-      await expInstance.transfer.sendTransaction(accounts[3], "1000000000000000000", {from: accounts[4], gasPrice:1});
+      await talaoInstance.transfer.sendTransaction(accounts[3], "1000000000000000000", {from: accounts[4], gasPrice:1});
       let ethBalanceUser2 = await web3.eth.getBalance(accounts[4]);
       assert.isAbove(ethBalanceUser2.toNumber(), web3.toWei("5", "finney"));
       assert.isAbove(ethBalanceUser1.c[1], ethBalanceUser2.c[1], "refill did happen");
     });
 
     it("should be possible to transfer tokens endlessly", async() => {
-      await expInstance.transfer.sendTransaction(accounts[9], "10000000000000000000000", {from: accounts[3]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
-      await expInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
-      await expInstance.transfer.sendTransaction(accounts[9], "10000000000000000000000", {from: accounts[3]});
+      await talaoInstance.transfer.sendTransaction(accounts[9], "10000000000000000000000", {from: accounts[3]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[1], "10000000000000000000000", {from: accounts[2]});
+      await talaoInstance.transfer.sendTransaction(accounts[2], "10000000000000000000000", {from: accounts[1]});
+      await talaoInstance.transfer.sendTransaction(accounts[9], "10000000000000000000000", {from: accounts[3]});
     });
   });
 });
