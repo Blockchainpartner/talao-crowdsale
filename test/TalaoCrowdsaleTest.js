@@ -242,6 +242,16 @@ contract('TalaoCrowdsale', function(accounts) {
       assert.equal(participation.toNumber(), 400000000000000000000, "participation not recorded properly");
     });
 
+    it('presale individual cap should not apply to sale individual cap', async() => {
+      await increaseTimeTo(startPresale);
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "200000000000000000000", {from: accounts[0]});
+      let participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 0, "participation not recorded properly");
+      await increaseTimeTo(startSale+1);
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000}).should.be.rejectedWith(revert);
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000});
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
+
   });
 
   describe('Sale Features', () => {
@@ -851,4 +861,5 @@ contract('TalaoCrowdsale', function(accounts) {
       await talaoInstance.transfer.sendTransaction(accounts[9], "10000000000000000000000", {from: accounts[3]});
     });
   });
+});
 });

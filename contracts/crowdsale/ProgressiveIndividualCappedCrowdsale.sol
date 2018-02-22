@@ -42,16 +42,6 @@ contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrow
     }
 
     /**
-     * @dev Set the individual cap for the first day. Removed 24h limit from original contract
-     * @param _baseEthCapPerAddress base cap in wei
-     */
-    function setBaseEthCapPerAddress(uint256 _baseEthCapPerAddress)
-        internal
-    {
-        baseEthCapPerAddress = _baseEthCapPerAddress;
-    }
-
-    /**
      * @dev Get the current individual cap.
      * @dev This amount increase everyday in an exponential way. Day 1: base cap, Day 2: 2 * base cap, Day 3: 4 * base cap ...
      * @return individual cap in wei
