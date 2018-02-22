@@ -76,7 +76,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
       startGeneralSale = _startGeneralSale;
       presaleCap = _presaleCap;
-      dateOfBonusRelease = endTime + presaleBonusLock;
+      dateOfBonusRelease = endTime.add(presaleBonusLock);
       generalRate = _generalRate;
       presaleBonus = _presaleBonus;
   }
@@ -196,7 +196,6 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       // minting tokens at general rate because these tokens are not timelocked
       uint256 weiAmount = msg.value;
       uint256 tokens = weiAmount.mul(generalRate);
-      token.mint(beneficiary, tokens);
 
       // checking if a timelock contract has been already created (not the first presale investment)
       // creating a timelock contract if none exists
@@ -207,10 +206,11 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
       // minting timelocked tokens ; balance goes to the timelock contract
       uint256 timelockedTokens = weiAmount.mul(presaleBonus);
-      token.mint(timelockedTokensContracts[msg.sender], timelockedTokens);
       weiRaisedPreSale = weiRaisedPreSale.add(weiAmount);
 
-      TokenPurchase(msg.sender, beneficiary, weiAmount, (tokens + timelockedTokens));
+      token.mint(beneficiary, tokens);
+      token.mint(timelockedTokensContracts[msg.sender], timelockedTokens);
+      TokenPurchase(msg.sender, beneficiary, weiAmount, (tokens.add(timelockedTokens)));
       forwardFunds();
   }
 
@@ -227,29 +227,29 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
         // advisors tokens : 3M ; 1 year cliff, vested for another year
         address lockedAdvisorsTokensWallet = new TokenVesting(advisorsWallet, now, cliffDate, unlockDate, false);
         timelockedTokensContracts[advisorsWallet] = lockedAdvisorsTokensWallet;
-        token.mint(lockedAdvisorsTokensWallet, 3000000000000000000000000);
 
         // Vesting for founders ; not revocable ; 1 year cliff, vested for another year
         address lockedFoundersTokensWallet1 = new TokenVesting(foundersWallet1, now, cliffDate, unlockDate, false);
         timelockedTokensContracts[foundersWallet1] = lockedFoundersTokensWallet1;
-        token.mint(lockedFoundersTokensWallet1, 4000000000000000000000000);
         address lockedFoundersTokensWallet2 = new TokenVesting(foundersWallet2, now, cliffDate, unlockDate, false);
         timelockedTokensContracts[foundersWallet2] = lockedFoundersTokensWallet2;
-        token.mint(lockedFoundersTokensWallet2, 4000000000000000000000000);
         address lockedFoundersTokensWallet3 = new TokenVesting(foundersWallet3, now, cliffDate, unlockDate, false);
         timelockedTokensContracts[foundersWallet3] = lockedFoundersTokensWallet3;
-        token.mint(lockedFoundersTokensWallet3, 4000000000000000000000000);
-
-        // talao shareholders & employees
-        token.mint(shareholdersWallet, 6000000000000000000000000);
-
-        // tokens reserve for talent ambassador, bounty and cash reserve : 29M tokens ; no timelock
-        token.mint(reserveWallet, 29000000000000000000000000);
 
         // mint remaining tokens out of 150M to be timelocked for future round(s)
         uint dateOfFutureRoundRelease = now.add(futureRoundTokensRelease);
         address lockedRoundsTokensWallet = new TokenTimelock(token, futureRoundWallet, dateOfFutureRoundRelease);
         timelockedTokensContracts[futureRoundWallet] = lockedRoundsTokensWallet;
+
+        token.mint(lockedAdvisorsTokensWallet, 3000000000000000000000000);
+        token.mint(lockedFoundersTokensWallet1, 4000000000000000000000000);
+        token.mint(lockedFoundersTokensWallet2, 4000000000000000000000000);
+        token.mint(lockedFoundersTokensWallet3, 4000000000000000000000000);
+
+        // talao shareholders & employees
+        token.mint(shareholdersWallet, 6000000000000000000000000);
+        // tokens reserve for talent ambassador, bounty and cash reserve : 29M tokens ; no timelock
+        token.mint(reserveWallet, 29000000000000000000000000);
 
         uint256 totalSupply = token.totalSupply();
         uint256 maxSupply = 150000000000000000000000000;

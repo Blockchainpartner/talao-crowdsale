@@ -242,6 +242,18 @@ contract('TalaoCrowdsale', function(accounts) {
       assert.equal(participation.toNumber(), 400000000000000000000, "participation not recorded properly");
     });
 
+    it('should unwhitelist presale address', async () => {
+      await increaseTimeTo(startPresale);
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "200000000000000000000", {from: accounts[0]});
+      assert.isTrue(await TalaoCrowdsaleInstance.isWhitelistedPresale.call(accounts[1]));
+      await TalaoCrowdsaleInstance.unwhitelistAddressPresale(accounts[1], {from: accounts[0]});
+      assert.isFalse(await TalaoCrowdsaleInstance.isWhitelistedPresale.call(accounts[1]));
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "100000000000000000000", {from: accounts[0]});
+      assert.isTrue(await TalaoCrowdsaleInstance.isWhitelistedPresale.call(accounts[1]));
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "100000000000000000001", gas: 4700000}).should.be.rejectedWith(revert);
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "100000000000000000000", gas: 4700000});
+    });
+
     it('presale individual cap should not apply to sale individual cap', async() => {
       await increaseTimeTo(startPresale);
       await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "200000000000000000000", {from: accounts[0]});
@@ -606,6 +618,13 @@ contract('TalaoCrowdsale', function(accounts) {
       await talaoInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]}).should.be.rejectedWith(revert);
     });
 
+    it('should not be possible to create a vault with a price higher than vauld deposit', async () => {
+      let userTokens1 = await talaoInstance.balanceOf.call(accounts[2]);
+      await talaoInstance.createVaultAccess.sendTransaction("10000000000000000001", {from: accounts[2]});
+      let userTokens2 = await talaoInstance.balanceOf.call(accounts[2]);
+      assert.equal(userTokens1.toNumber(), userTokens2.toNumber());
+    });
+
     it('should not be possible to create a vault access without tokens', async () => {
       let totalDeposit1 = await talaoInstance.totalDeposit.call();
       let balanceContract1 = await talaoInstance.balanceOf.call(talaoInstance.address);
@@ -649,7 +668,8 @@ contract('TalaoCrowdsale', function(accounts) {
     });
 
     it("should not be possible to get access to a vault without the right amount of tokens", async() => {
-      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[8]}).should.be.rejectedWith(revert);
+      let shouldBeFalse = await talaoInstance.getVaultAccess.call(accounts[1], {from:accounts[7]});
+      assert.isFalse(shouldBeFalse);
       await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]});
     });
 
@@ -748,7 +768,6 @@ contract('TalaoCrowdsale', function(accounts) {
       assert.equal(finalized, true);
       await talaoInstance.transfer.sendTransaction(talaoInstance.address, "10000000000000000000000", {from: accounts[6]});
       await talaoInstance.sendTransaction({from: accounts[0], value:"100000000000000000000"});
-      //await talaoInstance.setMinBalance.sendTransaction("50000000000000000" ,{from: accounts[0]});
       let minBalance = await talaoInstance.minBalanceForAccounts.call();
       let balanceContract = await web3.eth.getBalance(talaoInstance.address);
       assert.isAbove(balanceContract.toNumber(), 0, "no eth on the contract");
@@ -756,15 +775,28 @@ contract('TalaoCrowdsale', function(accounts) {
 
     it("should be possible to set prices", async() => {
       await talaoInstance.setPrices.sendTransaction("1000000000000000000", "1000000000000000000", "1000000000000000000", {from: accounts[0]});
-      //let buyPrice = await talaoInstance.buyPrice.call();
-      //assert.equal(buyPrice.toNumber(), 1000000000000000000, "buyPrice not set");
     });
 
     it("should be possible to buy 1 TALAO for 1 ETH", async() => {
+      let userEth1 = await web3.eth.getBalance(accounts[7]);
       await talaoInstance.buy.sendTransaction({from: accounts[7], value:"1000000000000000000"});
+      let userEth2 = await web3.eth.getBalance(accounts[7]);
       let userBalance = await talaoInstance.balanceOf.call(accounts[7]);
+      assert.isAbove(userEth1.toNumber(), userEth2.toNumber());
       assert.equal(userBalance.toNumber(), 1000000000000000000, "not a correct buy");
     });
+
+    it("should be possible to withdraw 0.1 ETH", async() => {
+      let balanceContract1 = await web3.eth.getBalance(talaoInstance.address);
+      assert.isAbove(balanceContract1.toNumber(), 0, "no eth on the contract");
+      let ownerBalance1 = await web3.eth.getBalance(accounts[0]);
+      await talaoInstance.withdrawEther("100000000000000000", {from:accounts[1]}).should.be.rejectedWith(revert);
+      await talaoInstance.withdrawEther("100000000000000000", {from:accounts[0]});
+      let ownerBalance2 = await web3.eth.getBalance(accounts[0]);
+      let balanceContract2 = await web3.eth.getBalance(talaoInstance.address);
+      assert.isAbove(balanceContract1.toNumber(), balanceContract2.toNumber(), "contract did not send eth");
+      assert.isAbove(ownerBalance2.toNumber(), ownerBalance1.toNumber(), "did not receive eth");
+    })
 
     it("should be possible to buy 2 TALAO for 2 ETH", async() => {
       await talaoInstance.buy.sendTransaction({from: accounts[8], value:"2000000000000000000"});

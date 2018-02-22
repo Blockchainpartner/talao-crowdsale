@@ -181,7 +181,7 @@ contract TalaoToken is MintableToken {
       returns (uint amount)
   {
       amount = msg.value.mul(marketplace.unitPrice).div(marketplace.buyPrice);
-      require(balanceOf(this)-totalDeposit >= amount);
+      require(balanceOf(this).sub(totalDeposit) >= amount);
       _transfer(this, msg.sender, amount);
       // add an event
       return amount;
@@ -213,10 +213,9 @@ contract TalaoToken is MintableToken {
   function withdrawEther(uint256 ethers)
       public
       onlyOwner
-      returns (bool)
   {
       if (this.balance >= ethers) {
-          return owner.send(ethers);
+          msg.sender.transfer(ethers);
       }
   }
 
@@ -228,7 +227,7 @@ contract TalaoToken is MintableToken {
       public
       onlyOwner
   {
-      require (balanceOf(this).sub(totalDeposit) >= tokens);
+      require(balanceOf(this).sub(totalDeposit) >= tokens);
       _transfer(this, msg.sender, tokens);
   }
 
@@ -247,7 +246,7 @@ contract TalaoToken is MintableToken {
       public
       onlyMintingFinished
   {
-      require (AccessAllowance[msg.sender][msg.sender].clientAgreement==false);
+      require(AccessAllowance[msg.sender][msg.sender].clientAgreement==false);
       if (price>vaultDeposit) {
           Vault(msg.sender, msg.sender, 2);
           return;
@@ -258,7 +257,7 @@ contract TalaoToken is MintableToken {
       }
       Data[msg.sender].accessPrice=price;
       super.transfer(this, vaultDeposit);
-      totalDeposit += vaultDeposit;
+      totalDeposit = totalDeposit.add(vaultDeposit);
       Data[msg.sender].userDeposit=vaultDeposit;
       Data[msg.sender].sharingPlan=100;
       AccessAllowance[msg.sender][msg.sender].clientAgreement=true;
@@ -273,10 +272,10 @@ contract TalaoToken is MintableToken {
       public
       onlyMintingFinished
   {
-      require (AccessAllowance[msg.sender][msg.sender].clientAgreement==true);
-      assert(_transfer(this, msg.sender, Data[msg.sender].userDeposit));
-      totalDeposit-=Data[msg.sender].userDeposit;
+      require(AccessAllowance[msg.sender][msg.sender].clientAgreement==true);
+      require(_transfer(this, msg.sender, Data[msg.sender].userDeposit));
       AccessAllowance[msg.sender][msg.sender].clientAgreement=false;
+      totalDeposit=totalDeposit.sub(Data[msg.sender].userDeposit);
       Data[msg.sender].sharingPlan=0;
       Vault(msg.sender, msg.sender, 0);
   }
@@ -317,8 +316,8 @@ contract TalaoToken is MintableToken {
       public
       onlyMintingFinished
   {
-      require (newplan<=100);
-      require (AccessAllowance[msg.sender][msg.sender].clientAgreement==true);
+      require(newplan<=100);
+      require(AccessAllowance[msg.sender][msg.sender].clientAgreement==true);
       AccessAllowance[Data[msg.sender].appointedAgent][msg.sender].clientAgreement=false;
       Vault(Data[msg.sender].appointedAgent, msg.sender, 4);
       Data[msg.sender].appointedAgent=newagent;
