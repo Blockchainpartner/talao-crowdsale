@@ -1,7 +1,5 @@
 pragma solidity ^0.4.18;
 
-// 1519025365, 1519026365, 1520025365, "1000000000000000000000", "5000000000000000000000", "20000000000000000000000", "0xcf09f36227aa07e3318fa57a16b453d29ecf786d"
-
 import './TalaoToken.sol';
 import './crowdsale/ProgressiveIndividualCappedCrowdsale.sol';
 import './token/TokenTimelock.sol';
