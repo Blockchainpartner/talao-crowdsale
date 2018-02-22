@@ -251,7 +251,7 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000}).should.be.rejectedWith(revert);
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000});
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
-
+    });
   });
 
   describe('Sale Features', () => {
@@ -861,5 +861,4 @@ contract('TalaoCrowdsale', function(accounts) {
       await talaoInstance.transfer.sendTransaction(accounts[9], "10000000000000000000000", {from: accounts[3]});
     });
   });
-});
 });
