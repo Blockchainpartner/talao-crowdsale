@@ -15,7 +15,7 @@ contract('TalaoCrowdsale', function(accounts) {
   // last update Feb 13th
   const generalRate = 1236;
   const presaleBonus = 407;
-  // presale cap : 18 259 ETH
+  // presale cap - 18 259 ETH
   const presaleCap = 18259000000000000000000;
   // minimum amount of funds to be raised in weis - 7 353 ETH
   const goal = 7353000000000000000000;
@@ -65,12 +65,6 @@ contract('TalaoCrowdsale', function(accounts) {
     let startPresale = latestTime() + duration.minutes(1);
     let startSale = latestTime() + duration.days(10);
     let endTime = latestTime() + duration.days(30);
-    // presale cap  5 000 ETH
-    let presaleCap = 18259000000000000000000;
-    // minimum amount of funds to be raised in weis - 1 000 ETH
-    let goal = 7353000000000000000000;
-    // Maximum amount of funds to be raised - 20 000 ETH
-    let cap = 34440000000000000000000;
     // address where funds are collected
     let wallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7045";
     let roundWallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7047";
@@ -97,8 +91,14 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "99999999999999999999", gas: 4700000}).should.be.rejectedWith(revert);
     });
 
+    it('should have an individual cap recorded', async() => {
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]});
+      let cap = await TalaoCrowdsaleInstance.presaleIndividualCap(accounts[1]);
+      assert.equal(cap.toNumber(), presaleCap, "cap not recorded properly");
+    });
+
     it('should accept user that is whitelisted for the presale', async () => {
-      await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]});
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]});
       await increaseTimeTo(startPresale);
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "100000000000000000000", gas: 4700000});
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: 1, gas: 4700000});
@@ -113,7 +113,7 @@ contract('TalaoCrowdsale', function(accounts) {
     });
 
     it('should stop the presale at startGeneralSale', async () => {
-      await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]})
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]})
       await increaseTimeTo(startPresale);
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "100000000000000000000", gas: 4700000});
       await increaseTimeTo(startSale+1);
@@ -124,14 +124,16 @@ contract('TalaoCrowdsale', function(accounts) {
 
     it('should prevent exceeding the presale hard cap', async () => {
       await increaseTimeTo(startPresale+1);
-      await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]})
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]})
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "18259000000000000000001", gas: 4700000}).should.be.rejectedWith(revert);
     });
 
     it('should buy the whole presale', async () => {
       await increaseTimeTo(startPresale+1);
-      await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]});
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]});
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "18259000000000000000000", gas: 4700000});
+      let participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 18259000000000000000000, "participation not recorded properly");
       let balance = await talaoInstance.balanceOf(accounts[1]);
       // should be 22.568124M tokens
       assert.equal(balance, 22568124000000000000000000);
@@ -144,7 +146,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
     it('should be able to finalize if the soft cap has been reached at presale', async () => {
       await increaseTimeTo(startPresale+1);
-      await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]})
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]})
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "7353000000000000000000", gas: 4700000});
       await increaseTimeTo(endTime+1);
       await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
@@ -159,7 +161,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
     it('should not be able to transfer tokens before the sale has been finalized', async () => {
       await increaseTimeTo(startPresale+1);
-      await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]})
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]})
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "7353000000000000000000", gas: 4700000});
 
       await talaoInstance.transfer(accounts[3],1000,{from:accounts[1]}).should.be.rejectedWith(revert);
@@ -167,7 +169,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
     it('should be able to transfer tokens after the sale has been finalized', async () => {
       await increaseTimeTo(startPresale);
-      await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]})
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]})
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "7353000000000000000000", gas: 4700000});
       await increaseTimeTo(endTime+1);
       await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
@@ -176,6 +178,68 @@ contract('TalaoCrowdsale', function(accounts) {
       await talaoInstance.transfer(accounts[3],1000,{from:accounts[1]});
       let balance = await talaoInstance.balanceOf(accounts[3]);
       assert.equal(balance,1000);
+    });
+
+    it('should not be possible to go above individual presale cap', async() => {
+      await increaseTimeTo(startPresale);
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "200000000000000000000", {from: accounts[0]});
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000001", gas: 4700000}).should.be.rejectedWith(revert);
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000});
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
+      let participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 200000000000000000000, "participation not recorded properly");
+    });
+
+    it('multiple investors ; different caps', async() => {
+      await increaseTimeTo(startPresale);
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "200000000000000000000", {from: accounts[0]});
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[2], "400000000000000000000", {from: accounts[0]});
+      let participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 0, "participation not recorded properly");
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000001", gas: 4700000}).should.be.rejectedWith(revert);
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000});
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[2], to: TalaoCrowdsaleInstance.address, value: "400000000000000000001", gas: 4700000}).should.be.rejectedWith(revert);
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[2], to: TalaoCrowdsaleInstance.address, value: "400000000000000000000", gas: 4700000});
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[2], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
+      participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 200000000000000000000, "participation not recorded properly");
+      participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[2]);
+      assert.equal(participation.toNumber(), 400000000000000000000, "participation not recorded properly");
+    });
+
+    it('multiple investments ; reaching cap in two transactions', async() => {
+      await increaseTimeTo(startPresale);
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "400000000000000000000", {from: accounts[0]});
+      let participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 0, "participation not recorded properly");
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000});
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000});
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
+      participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 400000000000000000000, "participation not recorded properly");
+    });
+
+    it('multiple investments ; reaching two different cap in two transactions', async() => {
+      await increaseTimeTo(startPresale);
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "200000000000000000000", {from: accounts[0]});
+      let participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 0, "participation not recorded properly");
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000});
+      participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 200000000000000000000, "participation not recorded properly");
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
+      participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 200000000000000000000, "participation not recorded properly");
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "400000000000000000000", {from: accounts[0]});
+      participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 200000000000000000000, "participation not recorded properly");
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000});
+      participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 400000000000000000000, "participation not recorded properly");
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
+      participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
+      assert.equal(participation.toNumber(), 400000000000000000000, "participation not recorded properly");
     });
 
   });
@@ -220,7 +284,7 @@ contract('TalaoCrowdsale', function(accounts) {
       });
 
       it('should give the team their tokens and mint the next round tokens if the sale is successful', async () => {
-        await TalaoCrowdsaleInstance.whitelistAddressesPresale(new Array(accounts[1]), {from: accounts[0]});
+        await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]});
         await increaseTimeTo(startPresale+1);
         await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "18259000000000000000000", gas: 4700000, gasPrice: 1});
         await increaseTimeTo(startSale+duration.days(19));

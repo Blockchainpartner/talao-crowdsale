@@ -19,7 +19,8 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   uint256 public presaleCap;
   uint256 public startGeneralSale;
 
-  mapping (address => uint) public presaleParticipation;
+  mapping (address => uint256) public presaleParticipation;
+  mapping (address => uint256) public presaleIndividualCap;
 
   uint256 public presaleBonus;
   uint256 public generalRate;
@@ -136,27 +137,28 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   }
 
   /**
-   * @dev Whitelists an array of users for the presale.
-   * @param _users the users to be whitelisted
+   * @dev Whitelists a user for the presale with an individual cap ; cap needs to be above participation if set again
+   * @param _user the users to be whitelisted
+   * @param _cap the user individual cap in wei
    */
-  function whitelistAddressesPresale(address[] _users)
+  function whitelistAddressPresale(address _user, uint _cap)
       public
       onlyOwner
   {
-      for(uint i = 0 ; i < _users.length ; i++) {
-        whiteListedAddressPresale[_users[i]] = true;
-      }
+      require(_cap > presaleParticipation[_user]);
+      whiteListedAddressPresale[_user] = true;
+      presaleIndividualCap[_user] = _cap;
   }
 
   /**
    * @dev Removes a user from the presale whitelist.
-   * @param _users the user to be removed from the presale whitelist
+   * @param _user the user to be removed from the presale whitelist
    */
-  function unwhitelistAddressPresale(address _users)
+  function unwhitelistAddressPresale(address _user)
       public
       onlyOwner
   {
-      whiteListedAddressPresale[_users] = false;
+      whiteListedAddressPresale[_user] = false;
   }
 
   /**
@@ -271,7 +273,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       external
       payable
   {
-      if (validPurchasePresale()){
+      if (now >= startTime && now < startGeneralSale){
         buyTokensPresale(msg.sender);
       } else {
         buyTokens(msg.sender);
@@ -304,10 +306,11 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   {
       presaleParticipation[msg.sender] = presaleParticipation[msg.sender].add(msg.value);
       bool enough = presaleParticipation[msg.sender] >= 100 ether;
+      bool notTooMuch = presaleIndividualCap[msg.sender] >= presaleParticipation[msg.sender];
       bool withinPeriod = now >= startTime && now < startGeneralSale;
       bool nonZeroPurchase = msg.value != 0;
       bool withinCap = weiRaisedPreSale.add(msg.value) <= presaleCap;
-      return withinPeriod && nonZeroPurchase && withinCap && enough;
+      return withinPeriod && nonZeroPurchase && withinCap && enough && notTooMuch;
   }
 
   /**
