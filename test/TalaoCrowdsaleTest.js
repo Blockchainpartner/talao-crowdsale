@@ -214,10 +214,15 @@ contract('TalaoCrowdsale', function(accounts) {
       let participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
       assert.equal(participation.toNumber(), 0, "participation not recorded properly");
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000});
+      let timelockContract = await TalaoCrowdsaleInstance.timelockedTokensContracts.call(accounts[1]);
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "200000000000000000000", gas: 4700000});
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
       participation = await TalaoCrowdsaleInstance.presaleParticipation(accounts[1]);
       assert.equal(participation.toNumber(), 400000000000000000000, "participation not recorded properly");
+      let timelockContract2 = await TalaoCrowdsaleInstance.timelockedTokensContracts.call(accounts[1]);
+      assert.equal(timelockContract, timelockContract2, "changed timelock contract");
+      let lockedBalance = await talaoInstance.balanceOf(timelockContract);
+      assert.equal(lockedBalance, 162800000000000000000000);
     });
 
     it('multiple investments ; reaching two different cap in two transactions', async() => {

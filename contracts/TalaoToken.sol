@@ -47,7 +47,7 @@ contract TalaoToken is MintableToken {
   mapping (address=>FreelanceData) public Data;
 
   //MarketplaceData
-  MarketplaceData marketplace;
+  MarketplaceData public marketplace;
 
   // balance eligible for refunds
   uint256 public minBalanceForAccounts;
@@ -63,6 +63,8 @@ contract TalaoToken is MintableToken {
   // msg = 7 client not enough token to pay vault access
   event Vault(address indexed client, address indexed freelance, uint msg);
   event SellingPrice(uint sellingPrice);
+  event TalaoBought(address buyer, uint amount, uint price, uint unitPrice);
+  event TalaoSold(address seller, uint amount, uint price, uint unitPrice);
 
   modifier onlyMintingFinished()
   {
@@ -73,7 +75,7 @@ contract TalaoToken is MintableToken {
   function TalaoToken()
       public
   {
-      setMinBalance(5000000000000000);
+      setMinBalance(5000000000000000 wei);
   }
 
   /**
@@ -183,7 +185,7 @@ contract TalaoToken is MintableToken {
       amount = msg.value.mul(marketplace.unitPrice).div(marketplace.buyPrice);
       require(balanceOf(this).sub(totalDeposit) >= amount);
       _transfer(this, msg.sender, amount);
-      // add an event
+      TalaoBought(msg.sender, amount, marketplace.buyPrice, marketplace.unitPrice);
       return amount;
   }
 
@@ -201,7 +203,7 @@ contract TalaoToken is MintableToken {
       super.transfer(this, amount);
       revenue = amount.mul(marketplace.sellPrice).div(marketplace.unitPrice);
       msg.sender.transfer(revenue);
-      // add an event
+      TalaoSold(msg.sender, amount, marketplace.sellPrice, marketplace.unitPrice);
       return revenue;
   }
 
