@@ -561,6 +561,16 @@ contract('TalaoCrowdsale', function(accounts) {
         await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000, gasPrice: 1});
         await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: 1, gas: 4700000, gasPrice: 1}).should.be.rejectedWith(revert);
       });
+
+      it('should be possible to change base cap before sale but not after', async () => {
+        await TalaoCrowdsaleInstance.setBaseCap("2000000000000000000", {from:accounts[0]});
+        await TalaoCrowdsaleInstance.setBaseCap("3000000000000000000", {from:accounts[1]}).should.be.rejectedWith(revert);
+        await increaseTimeTo(startSale);
+        await TalaoCrowdsaleInstance.setBaseCap("3000000000000000000", {from:accounts[0]}).should.be.rejectedWith(revert);
+        await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000, gasPrice: 1}).should.be.rejectedWith(revert);
+        await TalaoCrowdsaleInstance.sendTransaction({from: accounts[2], to: TalaoCrowdsaleInstance.address, value: "2000000000000000000", gas: 4700000, gasPrice: 1});
+        await TalaoCrowdsaleInstance.sendTransaction({from: accounts[2], to: TalaoCrowdsaleInstance.address, value: 1, gas: 4700000, gasPrice: 1}).should.be.rejectedWith(revert);
+      });
   });
 
   describe('Token features', () => {

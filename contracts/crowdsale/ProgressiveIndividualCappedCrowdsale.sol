@@ -20,10 +20,22 @@ contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrow
     mapping(address=>uint) public participated;
 
     function ProgressiveIndividualCappedCrowdsale(uint _baseEthCapPerAddress, uint _startGeneralSale)
-      public
+        public
     {
-      baseEthCapPerAddress = _baseEthCapPerAddress;
-      startGeneralSale = _startGeneralSale;
+        baseEthCapPerAddress = _baseEthCapPerAddress;
+        startGeneralSale = _startGeneralSale;
+    }
+
+    /**
+     * @dev setting cap before the general sale starts
+     * @param _newBaseCap the new cap
+     */
+    function setBaseCap(uint _newBaseCap)
+        public
+        onlyOwner
+    {
+        require(now < startGeneralSale);
+        baseEthCapPerAddress = _newBaseCap;
     }
 
     /**
