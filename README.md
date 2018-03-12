@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/Blockchainpartner/emindhub-crowdsale.svg?branch=master)](https://travis-ci.org/Blockchainpartner/emindhub-crowdsale)
 
-Welcome to the repository containing the eMindHub crowdsale smart contracts.
+Welcome to the repository containing the Talao crowdsale smart contracts.
 
 ## Running the tests
 
@@ -11,13 +11,16 @@ These instructions will get you a copy of the project up and running on your loc
 
 ```
 npm install
-
-
 ```
 
 ## Running the tests
 
 ```
-run ./scripts/test.sh
+./scripts/test.sh
+```
 
+You can also launch your own testrpc instance and run
+
+```
+truffle test
 ```
