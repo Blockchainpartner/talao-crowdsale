@@ -1,6 +1,6 @@
 # eMindHub Sale Contracts
 
-[![Build Status](https://travis-ci.org/Blockchainpartner/emindhub-crowdsale.svg?branch=master)](https://travis-ci.org/Blockchainpartner/emindhub-crowdsale)
+[![Build Status](https://travis-ci.org/Blockchainpartner/emindhub-crowdsale.svg?branch=master)](https://travis-ci.org/Blockchainpartner/talao-crowdsale)
 
 Welcome to the repository containing the Talao crowdsale smart contracts.
 
