@@ -28,7 +28,6 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   address public constant reserveWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
   address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7047;
   address public constant advisorsWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7048;
-  address public constant futureTokenOwner = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7049;
   address public constant foundersWallet1 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7050;
   address public constant foundersWallet2 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7051;
   address public constant foundersWallet3 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7052;
@@ -72,7 +71,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       require(_startGeneralSale > _startDate);
       require(_endDate > _startGeneralSale);
       require(_presaleCap > 0);
-      require(_presaleCap < _cap);
+      require(_presaleCap <= _cap);
 
       startGeneralSale = _startGeneralSale;
       presaleCap = _presaleCap;

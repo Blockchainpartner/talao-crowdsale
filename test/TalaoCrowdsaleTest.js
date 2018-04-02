@@ -16,7 +16,7 @@ contract('TalaoCrowdsale', function(accounts) {
   const generalRate = 1236;
   const presaleBonus = 407;
   // presale cap - 18 259 ETH
-  const presaleCap = 18259000000000000000000;
+  const presaleCap = 34440000000000000000000;
   // minimum amount of funds to be raised in weis - 7 353 ETH
   const goal = 7353000000000000000000;
   // Maximum amount of funds to be raised - 34 440 ETH
@@ -92,7 +92,7 @@ contract('TalaoCrowdsale', function(accounts) {
     });
 
     it('should have an individual cap recorded', async() => {
-      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "18259000000000000000000", {from: accounts[0]});
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "34440000000000000000000", {from: accounts[0]});
       let cap = await TalaoCrowdsaleInstance.presaleIndividualCap(accounts[1]);
       assert.equal(cap.toNumber(), presaleCap, "cap not recorded properly");
     });
@@ -269,6 +269,14 @@ contract('TalaoCrowdsale', function(accounts) {
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000});
       await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
     });
+
+    it('should be possible to sell out before sale', async() => {
+      await increaseTimeTo(startPresale);
+      await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "34440000000000000000000", {from: accounts[0]});
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "34440000000000000000000", gas: 4700000});
+      await increaseTimeTo(startSale+1);
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1", gas: 4700000}).should.be.rejectedWith(revert);
+    });
   });
 
   describe('Sale Features', () => {
@@ -365,6 +373,15 @@ contract('TalaoCrowdsale', function(accounts) {
         let finalized = await TalaoCrowdsaleInstance.isFinalized.call();
         assert.equal(finalized, true);
         await TalaoCrowdsaleInstance.finalize({from: accounts[0]}).should.be.rejectedWith(revert);
+      });
+
+      it('should be possible to let anybody finalize', async () => {
+        await increaseTimeTo(startSale+1);
+        await web3.eth.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "1000000000000000000", gas: 4700000, gasPrice: 1});
+        await increaseTimeTo(endTime+1);
+        await TalaoCrowdsaleInstance.finalize({from: accounts[2]});
+        let finalized = await TalaoCrowdsaleInstance.isFinalized.call();
+        assert.equal(finalized, true);
       });
 
       it('should allow refunds if the softcap is not reached', async () => {
