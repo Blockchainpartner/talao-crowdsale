@@ -4,6 +4,8 @@ import './TalaoToken.sol';
 import './crowdsale/ProgressiveIndividualCappedCrowdsale.sol';
 import './token/TokenTimelock.sol';
 import './token/TokenVesting.sol';
+import "./TalaoMarketplace.sol";
+
 
 /**
  * @title TalaoCrowdsale
@@ -215,6 +217,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
   /**
    * @dev Overriding the finalization method to add minting for founders/team/reserve if soft cap is reached.
+   *      Also deploying the marketplace and transferring ownership to the crowdsale owner.
    */
   function finalization()
       internal
@@ -255,8 +258,13 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
         uint256 toMint = maxSupply.sub(totalSupply);
         token.mint(lockedRoundsTokensWallet, toMint);
         token.finishMinting();
+        // deploy the marketplace
+        TalaoToken talao = TalaoToken(address(token));
+        TalaoMarketplace marketplace = new TalaoMarketplace(address(token));
+        talao.setMarketplace(address(marketplace));
+        marketplace.transferOwnership(owner);
 
-        // give the token ownership to the crowdsale owner for marketplace and vault purposes
+        // give the token ownership to the crowdsale owner for vault purposes
         token.transferOwnership(owner);
       }
       // if soft cap not reached ; vault opens for refunds

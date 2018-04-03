@@ -18,6 +18,8 @@ contract TalaoToken is MintableToken {
   string public constant symbol = "TALAO";
   uint8 public constant decimals = 18;
 
+  address public marketplace;
+
   // vault details
   uint256 public vaultDeposit;
   uint256 public totalDeposit;
@@ -34,23 +36,11 @@ contract TalaoToken is MintableToken {
       uint clientDate;
   }
 
-  struct MarketplaceData {
-    uint buyPrice;
-    uint sellPrice;
-    uint unitPrice;
-  }
-
   // Vault allowance client x freelancer
   mapping (address => mapping (address => ClientAccess)) public AccessAllowance;
 
   // Freelance data is public
   mapping (address=>FreelanceData) public Data;
-
-  //MarketplaceData
-  MarketplaceData public marketplace;
-
-  // balance eligible for refunds
-  uint256 public minBalanceForAccounts;
 
   // Those event notifies UI about vaults action with msg code
   // msg = 0 Vault access closed
@@ -62,9 +52,6 @@ contract TalaoToken is MintableToken {
   // msg = 6 vault access granted to client
   // msg = 7 client not enough token to pay vault access
   event Vault(address indexed client, address indexed freelance, uint msg);
-  event SellingPrice(uint sellingPrice);
-  event TalaoBought(address buyer, uint amount, uint price, uint unitPrice);
-  event TalaoSold(address seller, uint amount, uint price, uint unitPrice);
 
   modifier onlyMintingFinished()
   {
@@ -72,10 +59,17 @@ contract TalaoToken is MintableToken {
       _;
   }
 
-  function TalaoToken()
+  /**
+  * @dev Let the owner set the marketplace address once minting is over
+  *      Possible to do it more than once to ensure maintainability
+  * @param theMarketplace the marketplace address
+  **/
+  function setMarketplace(address theMarketplace)
       public
+      onlyMintingFinished
+      onlyOwner
   {
-      setMinBalance(5000000000000000 wei);
+      marketplace = theMarketplace;
   }
 
   /**
@@ -101,15 +95,7 @@ contract TalaoToken is MintableToken {
       onlyMintingFinished
       returns (bool result)
   {
-      result = super.transfer(_to, _value);
-      if((msg.sender.balance <= minBalanceForAccounts) && result) {
-        uint amount = minBalanceForAccounts.sub(msg.sender.balance).mul(marketplace.unitPrice).div(marketplace.sellPrice);
-        require(balanceOf(msg.sender) >= amount);
-        super.transfer(this, amount);
-        uint revenue = amount.mul(marketplace.sellPrice).div(marketplace.unitPrice);
-        msg.sender.transfer(revenue);
-      }
-      return result;
+      return super.transfer(_to, _value);
   }
 
   /**
@@ -143,68 +129,6 @@ contract TalaoToken is MintableToken {
           spender.receiveApproval(msg.sender, _value, this, _extraData);
           return true;
       }
-  }
-
-  /**
-   * @dev Set the balance eligible for refills
-   * @param weis the balance in weis
-   */
-  function setMinBalance(uint256 weis)
-      public
-      onlyOwner
-  {
-      minBalanceForAccounts = weis;
-  }
-
-  /**
-  * @dev Allow users to buy tokens for `newBuyPrice` eth and sell tokens for `newSellPrice` eth
-  * @param newSellPrice price the users can sell to the contract
-  * @param newBuyPrice price users can buy from the contract
-  * @param newUnitPrice to manage decimal issue 0,35 = 35 /100 (100 is unit)
-  */
-  function setPrices(uint256 newSellPrice, uint256 newBuyPrice, uint256 newUnitPrice)
-      public
-      onlyOwner
-  {
-      require (newSellPrice > 0 && newBuyPrice > 0 && newUnitPrice > 0);
-      marketplace.sellPrice = newSellPrice;
-      marketplace.buyPrice = newBuyPrice;
-      marketplace.unitPrice = newUnitPrice;
-  }
-
-  /**
-  * @dev Allow anyone to buy tokens against ether, depending on the buyPrice set by the contract owner.
-  * @return amount the amount of tokens bought
-  **/
-  function buy()
-      public
-      payable
-      onlyMintingFinished
-      returns (uint amount)
-  {
-      amount = msg.value.mul(marketplace.unitPrice).div(marketplace.buyPrice);
-      require(balanceOf(this).sub(totalDeposit) >= amount);
-      _transfer(this, msg.sender, amount);
-      TalaoBought(msg.sender, amount, marketplace.buyPrice, marketplace.unitPrice);
-      return amount;
-  }
-
-  /**
-  * @dev Allow anyone to sell tokens for ether, depending on the sellPrice set by the contract owner.
-  * @param amount the number of tokens to be sold
-  * @return revenue ethers sent in return
-  **/
-  function sell(uint amount)
-      public
-      onlyMintingFinished
-      returns (uint revenue)
-  {
-      require(balanceOf(msg.sender) >= amount);
-      super.transfer(this, amount);
-      revenue = amount.mul(marketplace.sellPrice).div(marketplace.unitPrice);
-      msg.sender.transfer(revenue);
-      TalaoSold(msg.sender, amount, marketplace.sellPrice, marketplace.unitPrice);
-      return revenue;
   }
 
   /**
@@ -378,17 +302,6 @@ contract TalaoToken is MintableToken {
       returns (address)
   {
       return Data[freelance].appointedAgent;
-  }
-
-  /**
-  * @dev Fallback function ; only owner can send ether for marketplace purposes.
-  **/
-  function ()
-      public
-      payable
-      onlyOwner
-  {
-
   }
 
 }
