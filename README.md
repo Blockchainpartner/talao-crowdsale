@@ -45,15 +45,13 @@ Quality of the submission includes (but not limited to):
 
 ## Running the tests
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
-
 ### Prerequisites
 
 ```
 npm install
 ```
 
-## Running the tests
+### Try it yourself!
 
 ```
 ./scripts/test.sh
