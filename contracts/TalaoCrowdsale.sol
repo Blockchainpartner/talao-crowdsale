@@ -39,6 +39,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   uint256 public constant lockTeamTokens = 2 years;
   uint256 public constant futureRoundTokensRelease = 1 years;
   uint256 public constant presaleBonusLock = 90 days;
+  uint256 public constant presaleParticipationMinimum = 100 ether;
 
   uint256 public baseEthCapPerAddress = 3 ether;
 
@@ -66,7 +67,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       CappedCrowdsale(_cap)
       FinalizableCrowdsale()
       RefundableCrowdsale(_goal)
-      Crowdsale(_startDate, _endDate, _wallet)
+      Crowdsale(_generalRate, _startDate, _endDate, _wallet)
       ProgressiveIndividualCappedCrowdsale(baseEthCapPerAddress, _startGeneralSale)
   {
       require(_goal <= _cap);
@@ -310,7 +311,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       returns (bool)
   {
       presaleParticipation[msg.sender] = presaleParticipation[msg.sender].add(msg.value);
-      bool enough = presaleParticipation[msg.sender] >= 100 ether;
+      bool enough = presaleParticipation[msg.sender] >= presaleParticipationMinimum;
       bool notTooMuch = presaleIndividualCap[msg.sender] >= presaleParticipation[msg.sender];
       bool withinPeriod = now >= startTime && now < startGeneralSale;
       bool nonZeroPurchase = msg.value != 0;

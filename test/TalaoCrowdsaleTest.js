@@ -540,7 +540,8 @@ contract('TalaoCrowdsale', function(accounts) {
 
       it('should be possible to invest only 3 ethers day 1', async () => {
         await increaseTimeTo(startSale);
-        await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000, gasPrice: 1});
+        await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000, gasPrice: 50000000001}).should.be.rejectedWith(revert);
+        await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000, gasPrice: 50000000000});
         await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: 1, gas: 4700000, gasPrice: 1}).should.be.rejectedWith(revert);
         await TalaoCrowdsaleInstance.sendTransaction({from: accounts[2], to: TalaoCrowdsaleInstance.address, value: "3000000000000000000", gas: 4700000, gasPrice: 1});
         await TalaoCrowdsaleInstance.sendTransaction({from: accounts[2], to: TalaoCrowdsaleInstance.address, value: 1, gas: 4700000, gasPrice: 1}).should.be.rejectedWith(revert);
@@ -671,12 +672,18 @@ contract('TalaoCrowdsale', function(accounts) {
     it("should be possible to appoint an agent", async() => {
       await talaoInstance.agentApproval.sendTransaction(accounts[7], 90, {from: accounts[1]});
       let newAgent = await talaoInstance.getFreelanceAgent.call(accounts[1]);
+      let hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[7]);
+      assert.isTrue(hasVaultAccess);
       assert.equal(newAgent, accounts[7], "agent not appointed correctly");
     });
 
     it("should be possible to appoint a new agent", async() => {
       await talaoInstance.agentApproval.sendTransaction(accounts[8], 90, {from: accounts[1]});
       let newAgent = await talaoInstance.getFreelanceAgent.call(accounts[1]);
+      let hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[7]);
+      assert.isFalse(hasVaultAccess);
+      hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[8]);
+      assert.isTrue(hasVaultAccess);
       assert.equal(newAgent, accounts[8], "agent not appointed correctly");
     });
 

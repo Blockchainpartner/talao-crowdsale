@@ -10,6 +10,7 @@ import '../math/SafeMath.sol';
  * @dev A token holder contract that can release its token balance gradually like a
  * typical vesting scheme, with a cliff and vesting period. Optionally revocable by the
  * owner.
+ * @notice Talao token transfer function cannot fail thus there's no need for revocation.
  */
 contract TokenVesting is Ownable {
   using SafeMath for uint256;
@@ -52,12 +53,11 @@ contract TokenVesting is Ownable {
 
   /**
    * @notice Transfers vested tokens to beneficiary.
+   * @dev Removed original require that amount released was > 0 ; releasing 0 is fine
    * @param token ERC20 token which is being vested
    */
   function release(ERC20Basic token) public {
     uint256 unreleased = releasableAmount(token);
-
-    require(unreleased > 0);
 
     released[token] = released[token].add(unreleased);
 
