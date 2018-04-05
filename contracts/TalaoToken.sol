@@ -2,10 +2,10 @@ pragma solidity ^0.4.18;
 
 import './token/MintableToken.sol';
 
-interface tokenRecipient { function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public; }
+interface tokenRecipient { function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external; }
 
 /**
- * @title TalaoCrowdsale
+ * @title TalaoToken
  * @dev This contract details the TALAO token and allows freelancers to create/revoke vault access, appoint agents.
  *      This contract also implements a marketplace to buy and sell on-chain TALAO tokens.
  * @author Blockchain Partner
@@ -18,53 +18,51 @@ contract TalaoToken is MintableToken {
   string public constant symbol = "TALAO";
   uint8 public constant decimals = 18;
 
-  // vault details
+  // the talao marketplace address
+  address public marketplace;
+
+  // talao tokens needed to create a vault
   uint256 public vaultDeposit;
+  // sum of all talao tokens desposited
   uint256 public totalDeposit;
 
   struct FreelanceData {
+      // access price to the talent vault
       uint256 accessPrice;
+      // address of appointed talent agent
       address appointedAgent;
+      // how much the talent is sharing with its agent
       uint sharingPlan;
+      // how much is the talent deposit
       uint256 userDeposit;
   }
 
+  // structure that defines a client access to a vault
   struct ClientAccess {
+      // is he allowed to access the vault
       bool clientAgreement;
+      // the block number when access was granted
       uint clientDate;
   }
 
-  struct MarketplaceData {
-    uint buyPrice;
-    uint sellPrice;
-    uint unitPrice;
-  }
-
   // Vault allowance client x freelancer
-  mapping (address => mapping (address => ClientAccess)) public AccessAllowance;
+  mapping (address => mapping (address => ClientAccess)) public accessAllowance;
 
   // Freelance data is public
-  mapping (address=>FreelanceData) public Data;
+  mapping (address=>FreelanceData) public data;
 
-  //MarketplaceData
-  MarketplaceData public marketplace;
+  enum VaultStatus {Closed, Created, PriceTooHigh, NotEnoughTokensDeposited, AgentRemoved, NewAgent, NewAccess, WrongAccessPrice}
 
-  // balance eligible for refunds
-  uint256 public minBalanceForAccounts;
-
-  // Those event notifies UI about vaults action with msg code
-  // msg = 0 Vault access closed
-  // msg = 1 Vault access created
-  // msg = 2 Vault access price too high
-  // msg = 3 not enough tokens to pay deposit
-  // msg = 4 agent removed
-  // msg = 5 new agent appointed
-  // msg = 6 vault access granted to client
-  // msg = 7 client not enough token to pay vault access
-  event Vault(address indexed client, address indexed freelance, uint msg);
-  event SellingPrice(uint sellingPrice);
-  event TalaoBought(address buyer, uint amount, uint price, uint unitPrice);
-  event TalaoSold(address seller, uint amount, uint price, uint unitPrice);
+  // Those event notifies UI about vaults action with vault status
+  // Closed Vault access closed
+  // Created Vault access created
+  // PriceTooHigh Vault access price too high
+  // NotEnoughTokensDeposited not enough tokens to pay deposit
+  // AgentRemoved agent removed
+  // NewAgent new agent appointed
+  // NewAccess vault access granted to client
+  // WrongAccessPrice client not enough token to pay vault access
+  event Vault(address indexed client, address indexed freelance, VaultStatus status);
 
   modifier onlyMintingFinished()
   {
@@ -72,10 +70,17 @@ contract TalaoToken is MintableToken {
       _;
   }
 
-  function TalaoToken()
+  /**
+  * @dev Let the owner set the marketplace address once minting is over
+  *      Possible to do it more than once to ensure maintainability
+  * @param theMarketplace the marketplace address
+  **/
+  function setMarketplace(address theMarketplace)
       public
+      onlyMintingFinished
+      onlyOwner
   {
-      setMinBalance(5000000000000000 wei);
+      marketplace = theMarketplace;
   }
 
   /**
@@ -101,15 +106,7 @@ contract TalaoToken is MintableToken {
       onlyMintingFinished
       returns (bool result)
   {
-      result = super.transfer(_to, _value);
-      if((msg.sender.balance <= minBalanceForAccounts) && result) {
-        uint amount = minBalanceForAccounts.sub(msg.sender.balance).mul(marketplace.unitPrice).div(marketplace.sellPrice);
-        require(balanceOf(msg.sender) >= amount);
-        super.transfer(this, amount);
-        uint revenue = amount.mul(marketplace.sellPrice).div(marketplace.unitPrice);
-        msg.sender.transfer(revenue);
-      }
-      return result;
+      return super.transfer(_to, _value);
   }
 
   /**
@@ -146,79 +143,15 @@ contract TalaoToken is MintableToken {
   }
 
   /**
-   * @dev Set the balance eligible for refills
-   * @param weis the balance in weis
-   */
-  function setMinBalance(uint256 weis)
-      public
-      onlyOwner
-  {
-      minBalanceForAccounts = weis;
-  }
-
-  /**
-  * @dev Allow users to buy tokens for `newBuyPrice` eth and sell tokens for `newSellPrice` eth
-  * @param newSellPrice price the users can sell to the contract
-  * @param newBuyPrice price users can buy from the contract
-  * @param newUnitPrice to manage decimal issue 0,35 = 35 /100 (100 is unit)
-  */
-  function setPrices(uint256 newSellPrice, uint256 newBuyPrice, uint256 newUnitPrice)
-      public
-      onlyOwner
-  {
-      require (newSellPrice > 0 && newBuyPrice > 0 && newUnitPrice > 0);
-      marketplace.sellPrice = newSellPrice;
-      marketplace.buyPrice = newBuyPrice;
-      marketplace.unitPrice = newUnitPrice;
-  }
-
-  /**
-  * @dev Allow anyone to buy tokens against ether, depending on the buyPrice set by the contract owner.
-  * @return amount the amount of tokens bought
-  **/
-  function buy()
-      public
-      payable
-      onlyMintingFinished
-      returns (uint amount)
-  {
-      amount = msg.value.mul(marketplace.unitPrice).div(marketplace.buyPrice);
-      require(balanceOf(this).sub(totalDeposit) >= amount);
-      _transfer(this, msg.sender, amount);
-      TalaoBought(msg.sender, amount, marketplace.buyPrice, marketplace.unitPrice);
-      return amount;
-  }
-
-  /**
-  * @dev Allow anyone to sell tokens for ether, depending on the sellPrice set by the contract owner.
-  * @param amount the number of tokens to be sold
-  * @return revenue ethers sent in return
-  **/
-  function sell(uint amount)
-      public
-      onlyMintingFinished
-      returns (uint revenue)
-  {
-      require(balanceOf(msg.sender) >= amount);
-      super.transfer(this, amount);
-      revenue = amount.mul(marketplace.sellPrice).div(marketplace.unitPrice);
-      msg.sender.transfer(revenue);
-      TalaoSold(msg.sender, amount, marketplace.sellPrice, marketplace.unitPrice);
-      return revenue;
-  }
-
-  /**
    * @dev Allows the owner to withdraw ethers from the contract.
-   * @param ethers quantity of ethers to be withdrawn
+   * @param ethers quantity in weis of ethers to be withdrawn
    * @return true if withdrawal successful ; false otherwise
    */
   function withdrawEther(uint256 ethers)
       public
       onlyOwner
   {
-      if (this.balance >= ethers) {
-          msg.sender.transfer(ethers);
-      }
+      msg.sender.transfer(ethers);
   }
 
   /**
@@ -239,7 +172,6 @@ contract TalaoToken is MintableToken {
 
   /**
   * @dev Allows anyone to create a vault access.
-  *      Vault is setup in another contract
   *      Vault deposit is transferred to token contract and sum is stored in totalDeposit
   *      Price must be lower than Vault deposit
   * @param price to pay to access certificate vault
@@ -248,22 +180,22 @@ contract TalaoToken is MintableToken {
       public
       onlyMintingFinished
   {
-      require(AccessAllowance[msg.sender][msg.sender].clientAgreement==false);
+      require(accessAllowance[msg.sender][msg.sender].clientAgreement==false);
       if (price>vaultDeposit) {
-          Vault(msg.sender, msg.sender, 2);
+          Vault(msg.sender, msg.sender, VaultStatus.PriceTooHigh);
           return;
       }
       if (balanceOf(msg.sender)<vaultDeposit) {
-          Vault(msg.sender, msg.sender,3);
+          Vault(msg.sender, msg.sender, VaultStatus.NotEnoughTokensDeposited);
           return;
       }
-      Data[msg.sender].accessPrice=price;
+      data[msg.sender].accessPrice=price;
       super.transfer(this, vaultDeposit);
       totalDeposit = totalDeposit.add(vaultDeposit);
-      Data[msg.sender].userDeposit=vaultDeposit;
-      Data[msg.sender].sharingPlan=100;
-      AccessAllowance[msg.sender][msg.sender].clientAgreement=true;
-      Vault(msg.sender, msg.sender, 1);
+      data[msg.sender].userDeposit=vaultDeposit;
+      data[msg.sender].sharingPlan=100;
+      accessAllowance[msg.sender][msg.sender].clientAgreement=true;
+      Vault(msg.sender, msg.sender, VaultStatus.Created);
   }
 
   /**
@@ -274,12 +206,12 @@ contract TalaoToken is MintableToken {
       public
       onlyMintingFinished
   {
-      require(AccessAllowance[msg.sender][msg.sender].clientAgreement==true);
-      require(_transfer(this, msg.sender, Data[msg.sender].userDeposit));
-      AccessAllowance[msg.sender][msg.sender].clientAgreement=false;
-      totalDeposit=totalDeposit.sub(Data[msg.sender].userDeposit);
-      Data[msg.sender].sharingPlan=0;
-      Vault(msg.sender, msg.sender, 0);
+      require(accessAllowance[msg.sender][msg.sender].clientAgreement==true);
+      require(_transfer(this, msg.sender, data[msg.sender].userDeposit));
+      accessAllowance[msg.sender][msg.sender].clientAgreement=false;
+      totalDeposit=totalDeposit.sub(data[msg.sender].userDeposit);
+      data[msg.sender].sharingPlan=0;
+      Vault(msg.sender, msg.sender, VaultStatus.Closed);
   }
 
   /**
@@ -299,7 +231,6 @@ contract TalaoToken is MintableToken {
   {
       require(_to != 0x0);
       require(balances[_from] >= _value);
-      require((balances[_to].add(_value)) > balances[_to]);
 
       balances[_from] = balances[_from].sub(_value);
       balances[_to] = balances[_to].add(_value);
@@ -319,13 +250,11 @@ contract TalaoToken is MintableToken {
       onlyMintingFinished
   {
       require(newplan<=100);
-      require(AccessAllowance[msg.sender][msg.sender].clientAgreement==true);
-      AccessAllowance[Data[msg.sender].appointedAgent][msg.sender].clientAgreement=false;
-      Vault(Data[msg.sender].appointedAgent, msg.sender, 4);
-      Data[msg.sender].appointedAgent=newagent;
-      Data[msg.sender].sharingPlan=newplan;
-      AccessAllowance[newagent][msg.sender].clientAgreement=true;
-      Vault(newagent, msg.sender, 5);
+      require(accessAllowance[msg.sender][msg.sender].clientAgreement==true);
+      Vault(data[msg.sender].appointedAgent, msg.sender, VaultStatus.AgentRemoved);
+      data[msg.sender].appointedAgent=newagent;
+      data[msg.sender].sharingPlan=newplan;
+      Vault(newagent, msg.sender, VaultStatus.NewAgent);
   }
 
   /**
@@ -351,19 +280,19 @@ contract TalaoToken is MintableToken {
       onlyMintingFinished
       returns (bool)
   {
-      require(AccessAllowance[freelance][freelance].clientAgreement==true);
-      require(AccessAllowance[msg.sender][freelance].clientAgreement!=true);
-      if (balanceOf(msg.sender)<Data[freelance].accessPrice){
-          Vault(msg.sender, freelance, 7);
+      require(accessAllowance[freelance][freelance].clientAgreement==true);
+      require(accessAllowance[msg.sender][freelance].clientAgreement!=true);
+      if (balanceOf(msg.sender)<data[freelance].accessPrice){
+          Vault(msg.sender, freelance, VaultStatus.WrongAccessPrice);
           return false;
       }
-      uint256 freelance_share = Data[freelance].accessPrice.mul(Data[freelance].sharingPlan).div(100);
-      uint256 agent_share = Data[freelance].accessPrice.sub(freelance_share);
+      uint256 freelance_share = data[freelance].accessPrice.mul(data[freelance].sharingPlan).div(100);
+      uint256 agent_share = data[freelance].accessPrice.sub(freelance_share);
       super.transfer(freelance, freelance_share);
-      super.transfer(Data[freelance].appointedAgent, agent_share);
-      AccessAllowance[msg.sender][freelance].clientAgreement=true;
-      AccessAllowance[msg.sender][freelance].clientDate=block.number;
-      Vault(msg.sender, freelance, 6);
+      super.transfer(data[freelance].appointedAgent, agent_share);
+      accessAllowance[msg.sender][freelance].clientAgreement=true;
+      accessAllowance[msg.sender][freelance].clientDate=block.number;
+      Vault(msg.sender, freelance, VaultStatus.NewAccess);
       return true;
   }
 
@@ -377,18 +306,21 @@ contract TalaoToken is MintableToken {
       view
       returns (address)
   {
-      return Data[freelance].appointedAgent;
+      return data[freelance].appointedAgent;
   }
 
   /**
-  * @dev Fallback function ; only owner can send ether for marketplace purposes.
+  * @dev Simple getter to check if user has access to a freelance vault
+  * @param freelance talent address
+  * @param user user address
+  * @return true if access granted or false if not
   **/
-  function ()
+  function hasVaultAccess(address freelance, address user)
       public
-      payable
-      onlyOwner
+      view
+      returns (bool)
   {
-
+      return ((accessAllowance[user][freelance].clientAgreement) || (data[freelance].appointedAgent == user));
   }
 
 }

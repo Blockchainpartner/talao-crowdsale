@@ -14,7 +14,8 @@ contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrow
 
     uint public startGeneralSale;
     uint public constant TIME_PERIOD_IN_SEC = 1 days;
-    uint public constant GAS_LIMIT_IN_WEI = 50000000000 wei; // limit gas price -50 Gwei wales stopper
+    uint public constant minimumParticipation = 1 ether;
+    uint public constant GAS_LIMIT_IN_WEI = 5E10 wei; // limit gas price -50 Gwei wales stopper
     uint256 public baseEthCapPerAddress;
 
     mapping(address=>uint) public participated;
@@ -46,11 +47,11 @@ contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrow
         internal
         returns(bool)
     {
-        require(tx.gasprice <= GAS_LIMIT_IN_WEI);
+        bool gasCheck = tx.gasprice <= GAS_LIMIT_IN_WEI;
         uint ethCapPerAddress = getCurrentEthCapPerAddress();
         participated[msg.sender] = participated[msg.sender].add(msg.value);
-        bool enough = participated[msg.sender] >= 1 ether;
-        return participated[msg.sender] <= ethCapPerAddress && enough;
+        bool enough = participated[msg.sender] >= minimumParticipation;
+        return participated[msg.sender] <= ethCapPerAddress && enough && gasCheck;
     }
 
     /**
@@ -67,7 +68,7 @@ contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrow
         uint timeSinceStartInSec = block.timestamp.sub(startGeneralSale);
         uint currentPeriod = timeSinceStartInSec.div(TIME_PERIOD_IN_SEC).add(1);
 
-        // for currentPeriod > 256 will always return baseEthCapPerAddress
+        // for currentPeriod > 256 will always return 0
         return (2 ** currentPeriod.sub(1)).mul(baseEthCapPerAddress);
     }
 }

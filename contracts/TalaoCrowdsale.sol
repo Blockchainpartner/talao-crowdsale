@@ -4,6 +4,8 @@ import './TalaoToken.sol';
 import './crowdsale/ProgressiveIndividualCappedCrowdsale.sol';
 import './token/TokenTimelock.sol';
 import './token/TokenVesting.sol';
+import "./TalaoMarketplace.sol";
+
 
 /**
  * @title TalaoCrowdsale
@@ -28,7 +30,6 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   address public constant reserveWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
   address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7047;
   address public constant advisorsWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7048;
-  address public constant futureTokenOwner = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7049;
   address public constant foundersWallet1 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7050;
   address public constant foundersWallet2 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7051;
   address public constant foundersWallet3 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7052;
@@ -38,6 +39,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   uint256 public constant lockTeamTokens = 2 years;
   uint256 public constant futureRoundTokensRelease = 1 years;
   uint256 public constant presaleBonusLock = 90 days;
+  uint256 public constant presaleParticipationMinimum = 100 ether;
 
   uint256 public baseEthCapPerAddress = 3 ether;
 
@@ -65,14 +67,14 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       CappedCrowdsale(_cap)
       FinalizableCrowdsale()
       RefundableCrowdsale(_goal)
-      Crowdsale(_startDate, _endDate, _wallet)
+      Crowdsale(_generalRate, _startDate, _endDate, _wallet)
       ProgressiveIndividualCappedCrowdsale(baseEthCapPerAddress, _startGeneralSale)
   {
       require(_goal <= _cap);
       require(_startGeneralSale > _startDate);
       require(_endDate > _startGeneralSale);
       require(_presaleCap > 0);
-      require(_presaleCap < _cap);
+      require(_presaleCap <= _cap);
 
       startGeneralSale = _startGeneralSale;
       presaleCap = _presaleCap;
@@ -216,6 +218,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
   /**
    * @dev Overriding the finalization method to add minting for founders/team/reserve if soft cap is reached.
+   *      Also deploying the marketplace and transferring ownership to the crowdsale owner.
    */
   function finalization()
       internal
@@ -256,8 +259,13 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
         uint256 toMint = maxSupply.sub(totalSupply);
         token.mint(lockedRoundsTokensWallet, toMint);
         token.finishMinting();
+        // deploy the marketplace
+        TalaoToken talao = TalaoToken(address(token));
+        TalaoMarketplace marketplace = new TalaoMarketplace(address(token));
+        talao.setMarketplace(address(marketplace));
+        marketplace.transferOwnership(owner);
 
-        // give the token ownership to the crowdsale owner for marketplace and vault purposes
+        // give the token ownership to the crowdsale owner for vault purposes
         token.transferOwnership(owner);
       }
       // if soft cap not reached ; vault opens for refunds
@@ -303,7 +311,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       returns (bool)
   {
       presaleParticipation[msg.sender] = presaleParticipation[msg.sender].add(msg.value);
-      bool enough = presaleParticipation[msg.sender] >= 100 ether;
+      bool enough = presaleParticipation[msg.sender] >= presaleParticipationMinimum;
       bool notTooMuch = presaleIndividualCap[msg.sender] >= presaleParticipation[msg.sender];
       bool withinPeriod = now >= startTime && now < startGeneralSale;
       bool nonZeroPurchase = msg.value != 0;
