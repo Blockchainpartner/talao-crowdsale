@@ -695,7 +695,11 @@ contract('TalaoCrowdsale', function(accounts) {
       let balanceUser1 = await talaoInstance.balanceOf(accounts[3]);
       let balanceFreelance1 = await talaoInstance.balanceOf(accounts[1]);
       let balanceAgent1 = await talaoInstance.balanceOf(accounts[8]);
+      let hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[3]);
+      assert.isFalse(hasVaultAccess);
       await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[3]});
+      hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[3]);
+      assert.isTrue(hasVaultAccess);
       let balanceUser2 = await talaoInstance.balanceOf(accounts[3]);
       let balanceFreelance2 = await talaoInstance.balanceOf(accounts[1]);
       let balanceAgent2 = await talaoInstance.balanceOf(accounts[8]);

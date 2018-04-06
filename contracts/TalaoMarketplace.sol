@@ -4,6 +4,11 @@ import "./ownership/Ownable.sol";
 import "./math/SafeMath.sol";
 import "./TalaoToken.sol";
 
+/**
+ * @title TalaoMarketplace
+ * @dev This contract is allowing users to buy or sell Talao tokens at a price set by the owner
+ * @author Blockchain Partner
+ */
 contract TalaoMarketplace is Ownable {
   using SafeMath for uint256;
 
@@ -94,7 +99,7 @@ contract TalaoMarketplace is Ownable {
   }
 
   /**
-   * @dev Allow the owner to withdraw tokens from the contract without taking tokens from deposits.
+   * @dev Allow the owner to withdraw tokens from the contract.
    * @param tokens quantity of tokens to be withdrawn
    */
   function withdrawTalao(uint256 tokens)
@@ -106,7 +111,7 @@ contract TalaoMarketplace is Ownable {
 
 
   /**
-  * @dev Fallback function ; only owner can send ether for marketplace purposes.
+  * @dev Fallback function ; only owner can send ether.
   **/
   function ()
       public

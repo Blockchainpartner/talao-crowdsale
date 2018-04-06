@@ -7,7 +7,6 @@ interface tokenRecipient { function receiveApproval(address _from, uint256 _valu
 /**
  * @title TalaoToken
  * @dev This contract details the TALAO token and allows freelancers to create/revoke vault access, appoint agents.
- *      This contract also implements a marketplace to buy and sell on-chain TALAO tokens.
  * @author Blockchain Partner
  */
 contract TalaoToken is MintableToken {
