@@ -288,9 +288,9 @@ contract('TalaoCrowdsale', function(accounts) {
     let startSale = latestTime() + duration.days(10);
     let endTime = latestTime() + duration.days(30);
     // address where funds are collected
-    let wallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7045";
-    let roundWallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7047";
-    let reserveWallet = "0xE7305033fE4D5994Cd88d69740E9DB59F27c7046";
+    let wallet = "0xC9a2BE82Ba706369730BDbd64280bc1132347F85";
+    let roundWallet = "0x80a27A56C29b83b25492c06b39AC049e8719a8fd";
+    let reserveWallet = "0xC9a2BE82Ba706369730BDbd64280bc1132347F85";
 
       beforeEach(async () => {
         // start and end timestamps where investments are allowed (both inclusive)
@@ -654,7 +654,7 @@ contract('TalaoCrowdsale', function(accounts) {
 
     it('should not be possible to create a vault with a price higher than vault deposit', async () => {
       let userTokens1 = await talaoInstance.balanceOf.call(accounts[2]);
-      await talaoInstance.createVaultAccess.sendTransaction("10000000000000000001", {from: accounts[2]});
+      await talaoInstance.createVaultAccess.sendTransaction("10000000000000000001", {from: accounts[2]}).should.be.rejectedWith(revert);
       let userTokens2 = await talaoInstance.balanceOf.call(accounts[2]);
       assert.equal(userTokens1.toNumber(), userTokens2.toNumber());
     });
@@ -662,7 +662,7 @@ contract('TalaoCrowdsale', function(accounts) {
     it('should not be possible to create a vault access without tokens', async () => {
       let totalDeposit1 = await talaoInstance.totalDeposit.call();
       let balanceContract1 = await talaoInstance.balanceOf.call(talaoInstance.address);
-      await talaoInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[8]});
+      await talaoInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[8]}).should.be.rejectedWith(revert);
       let totalDeposit2 = await talaoInstance.totalDeposit.call();
       let balanceContract2 = await talaoInstance.balanceOf.call(talaoInstance.address);
       assert.equal(totalDeposit1.toNumber(), totalDeposit2.toNumber(), "deposited something somehow");
@@ -728,13 +728,9 @@ contract('TalaoCrowdsale', function(accounts) {
     });
 
     it("should not be possible to get access to a vault without the right amount of tokens", async() => {
-      let shouldBeFalse = await talaoInstance.getVaultAccess.call(accounts[1], {from:accounts[9]});
-      assert.isFalse(shouldBeFalse);
       let userBalance = await talaoInstance.balanceOf(accounts[9]);
       assert.equal(0, userBalance, "user has tokens");
-      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[9]});
-      shouldBeFalse = await talaoInstance.getVaultAccess.call(accounts[1], {from:accounts[9]});
-      assert.isFalse(shouldBeFalse);
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[9]}).should.be.rejectedWith(revert);
     });
 
     it("should not be possible to withdraw more than fees", async() => {

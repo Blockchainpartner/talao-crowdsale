@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.23;
 
 import "./ownership/Ownable.sol";
 import "./math/SafeMath.sol";
@@ -30,7 +30,7 @@ contract TalaoMarketplace is Ownable {
   * @dev Constructor of the marketplace pointing to the TALAO token address
   * @param talao the talao token address
   **/
-  function TalaoMarketplace(address talao)
+  constructor(address talao)
       public
   {
       token = TalaoToken(talao);
@@ -46,7 +46,7 @@ contract TalaoMarketplace is Ownable {
       public
       onlyOwner
   {
-      require (newSellPrice > 0 && newBuyPrice > 0 && newUnitPrice > 0);
+      require (newSellPrice > 0 && newBuyPrice > 0 && newUnitPrice > 0, "wrong inputs");
       marketplace.sellPrice = newSellPrice;
       marketplace.buyPrice = newBuyPrice;
       marketplace.unitPrice = newUnitPrice;
@@ -63,7 +63,7 @@ contract TalaoMarketplace is Ownable {
   {
       amount = msg.value.mul(marketplace.unitPrice).div(marketplace.buyPrice);
       token.transfer(msg.sender, amount);
-      TalaoBought(msg.sender, amount, marketplace.buyPrice, marketplace.unitPrice);
+      emit TalaoBought(msg.sender, amount, marketplace.buyPrice, marketplace.unitPrice);
       return amount;
   }
 
@@ -76,11 +76,11 @@ contract TalaoMarketplace is Ownable {
       public
       returns (uint revenue)
   {
-      require(token.balanceOf(msg.sender) >= amount);
+      require(token.balanceOf(msg.sender) >= amount, "sender has not enough tokens");
       token.transferFrom(msg.sender, this, amount);
       revenue = amount.mul(marketplace.sellPrice).div(marketplace.unitPrice);
       msg.sender.transfer(revenue);
-      TalaoSold(msg.sender, amount, marketplace.sellPrice, marketplace.unitPrice);
+      emit TalaoSold(msg.sender, amount, marketplace.sellPrice, marketplace.unitPrice);
       return revenue;
   }
 

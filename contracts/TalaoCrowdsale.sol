@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.23;
 
 import './TalaoToken.sol';
 import './crowdsale/ProgressiveIndividualCappedCrowdsale.sol';
@@ -26,14 +26,13 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   uint256 public generalRate;
   uint256 public dateOfBonusRelease;
 
-  // TBD : need final addresses
-  address public constant reserveWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7046;
-  address public constant futureRoundWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7047;
-  address public constant advisorsWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7048;
-  address public constant foundersWallet1 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7050;
-  address public constant foundersWallet2 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7051;
-  address public constant foundersWallet3 = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7052;
-  address public constant shareholdersWallet = 0xE7305033fE4D5994Cd88d69740E9DB59F27c7053;
+  address public constant reserveWallet = 0xC9a2BE82Ba706369730BDbd64280bc1132347F85;
+  address public constant futureRoundWallet = 0x80a27A56C29b83b25492c06b39AC049e8719a8fd;
+  address public constant advisorsWallet = 0xE7305033Fe4d5994cd88d69740E9dB59f27c7048;
+  address public constant foundersWallet1 = 0x76934C75Ef9a02D444fa9d337C56c7ab0094154C;
+  address public constant foundersWallet2 = 0xd21aF5665Dc81563328d5cA2f984b4f6281c333f;
+  address public constant foundersWallet3 = 0x0DceD36d883752203E01441bD006725Acd128049;
+  address public constant shareholdersWallet = 0x554bC53533876fC501b230274F47598cbD435B5E;
 
   uint256 public constant cliffTeamTokensRelease = 1 years;
   uint256 public constant lockTeamTokens = 2 years;
@@ -60,7 +59,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   * @param _presaleBonus number of tokens for 1 ether in presale in addition of the general rate
   * @param _wallet address receiving ether if sale is successful
   **/
-  function TalaoCrowdsale(uint256 _startDate, uint256 _startGeneralSale, uint256 _endDate,
+  constructor(uint256 _startDate, uint256 _startGeneralSale, uint256 _endDate,
                           uint256 _goal, uint256 _presaleCap, uint256 _cap, uint256 _generalRate,
                           uint256 _presaleBonus, address _wallet)
       public
@@ -70,11 +69,11 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       Crowdsale(_generalRate, _startDate, _endDate, _wallet)
       ProgressiveIndividualCappedCrowdsale(baseEthCapPerAddress, _startGeneralSale)
   {
-      require(_goal <= _cap);
-      require(_startGeneralSale > _startDate);
-      require(_endDate > _startGeneralSale);
-      require(_presaleCap > 0);
-      require(_presaleCap <= _cap);
+      require(_goal <= _cap, "goal is superior to cap");
+      require(_startGeneralSale > _startDate, "general sale is starting before presale");
+      require(_endDate > _startGeneralSale, "sale ends before general start");
+      require(_presaleCap > 0, "presale cap is inferior or equal to 0");
+      require(_presaleCap <= _cap, "presale cap is superior to sale cap");
 
       startGeneralSale = _startGeneralSale;
       presaleCap = _presaleCap;
@@ -99,7 +98,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   **/
   modifier onlyPresaleWhitelisted()
   {
-      require(isWhitelistedPresale(msg.sender));
+      require(isWhitelistedPresale(msg.sender), "address is not whitelisted for presale");
       _;
   }
 
@@ -108,7 +107,8 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   **/
   modifier onlyWhitelisted()
   {
-      require(isWhitelisted(msg.sender) || isWhitelistedPresale(msg.sender));
+      require(isWhitelisted(msg.sender) || isWhitelistedPresale(msg.sender),
+              "address is not whitelisted for sale");
       _;
   }
 
@@ -145,7 +145,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       public
       onlyOwner
   {
-      require(_cap > presaleParticipation[_user]);
+      require(_cap > presaleParticipation[_user], "address has reached participation cap");
       whiteListedAddressPresale[_user] = true;
       presaleIndividualCap[_user] = _cap;
   }
@@ -170,15 +170,15 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       payable
       onlyWhitelisted
   {
-      require(beneficiary != 0x0);
-      require(validPurchase());
+      require(beneficiary != 0x0, "beneficiary cannot be 0x0");
+      require(validPurchase(), "purchase is not valid");
 
       uint256 weiAmount = msg.value;
       uint256 tokens = weiAmount.mul(generalRate);
       weiRaised = weiRaised.add(weiAmount);
 
       token.mint(beneficiary, tokens);
-      TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+      emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
       forwardFunds();
   }
 
@@ -192,8 +192,8 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       payable
       onlyPresaleWhitelisted
   {
-      require(beneficiary != 0x0);
-      require(validPurchasePresale());
+      require(beneficiary != 0x0, "beneficiary cannot be 0x0");
+      require(validPurchasePresale(), "presale purchase is not valid");
 
       // minting tokens at general rate because these tokens are not timelocked
       uint256 weiAmount = msg.value;
@@ -212,7 +212,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
       token.mint(beneficiary, tokens);
       token.mint(timelockedTokensContracts[msg.sender], timelockedTokens);
-      TokenPurchase(msg.sender, beneficiary, weiAmount, (tokens.add(timelockedTokens)));
+      emit TokenPurchase(msg.sender, beneficiary, weiAmount, (tokens.add(timelockedTokens)));
       forwardFunds();
   }
 
