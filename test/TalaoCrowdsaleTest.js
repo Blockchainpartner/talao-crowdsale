@@ -652,7 +652,7 @@ contract('TalaoCrowdsale', function(accounts) {
       await talaoInstance.createVaultAccess.sendTransaction("1000000000000000000", {from: accounts[1]}).should.be.rejectedWith(revert);
     });
 
-    it('should not be possible to create a vault with a price higher than vauld deposit', async () => {
+    it('should not be possible to create a vault with a price higher than vault deposit', async () => {
       let userTokens1 = await talaoInstance.balanceOf.call(accounts[2]);
       await talaoInstance.createVaultAccess.sendTransaction("10000000000000000001", {from: accounts[2]});
       let userTokens2 = await talaoInstance.balanceOf.call(accounts[2]);
@@ -667,6 +667,22 @@ contract('TalaoCrowdsale', function(accounts) {
       let balanceContract2 = await talaoInstance.balanceOf.call(talaoInstance.address);
       assert.equal(totalDeposit1.toNumber(), totalDeposit2.toNumber(), "deposited something somehow");
       assert.equal(balanceContract2.toNumber(), balanceContract1.toNumber(), "no tokens received");
+    });
+
+    it("should be possible to get access to a vault without agent", async() => {
+      let balanceUser1 = await talaoInstance.balanceOf(accounts[3]);
+      let balanceFreelance1 = await talaoInstance.balanceOf(accounts[1]);
+      let hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[3]);
+      assert.isFalse(hasVaultAccess);
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[3]});
+      hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[3]);
+      assert.isTrue(hasVaultAccess);
+      let balanceUser2 = await talaoInstance.balanceOf(accounts[3]);
+      let balanceFreelance2 = await talaoInstance.balanceOf(accounts[1]);
+      assert.isAbove(balanceUser1.toNumber(), balanceUser2.toNumber(), "user didn't send tokens");
+      assert.isAbove(balanceFreelance2.toNumber(), balanceFreelance1.toNumber(), "freelance didn't receive its share");
+      assert.equal(balanceFreelance2.c[0], balanceFreelance1.c[0]+10000);
+      assert.equal(balanceUser2.c[0], balanceUser1.c[0]-10000);
     });
 
     it("should be possible to appoint an agent", async() => {
@@ -692,15 +708,15 @@ contract('TalaoCrowdsale', function(accounts) {
     });
 
     it("should be possible to get access to a vault", async() => {
-      let balanceUser1 = await talaoInstance.balanceOf(accounts[3]);
+      let balanceUser1 = await talaoInstance.balanceOf(accounts[4]);
       let balanceFreelance1 = await talaoInstance.balanceOf(accounts[1]);
       let balanceAgent1 = await talaoInstance.balanceOf(accounts[8]);
-      let hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[3]);
+      let hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[4]);
       assert.isFalse(hasVaultAccess);
-      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[3]});
-      hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[3]);
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]});
+      hasVaultAccess = await talaoInstance.hasVaultAccess.call(accounts[1], accounts[4]);
       assert.isTrue(hasVaultAccess);
-      let balanceUser2 = await talaoInstance.balanceOf(accounts[3]);
+      let balanceUser2 = await talaoInstance.balanceOf(accounts[4]);
       let balanceFreelance2 = await talaoInstance.balanceOf(accounts[1]);
       let balanceAgent2 = await talaoInstance.balanceOf(accounts[8]);
       assert.isAbove(balanceAgent2.toNumber(), balanceAgent1.toNumber(), "agent didn't receive its share");
@@ -712,9 +728,13 @@ contract('TalaoCrowdsale', function(accounts) {
     });
 
     it("should not be possible to get access to a vault without the right amount of tokens", async() => {
-      let shouldBeFalse = await talaoInstance.getVaultAccess.call(accounts[1], {from:accounts[7]});
+      let shouldBeFalse = await talaoInstance.getVaultAccess.call(accounts[1], {from:accounts[9]});
       assert.isFalse(shouldBeFalse);
-      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[4]});
+      let userBalance = await talaoInstance.balanceOf(accounts[9]);
+      assert.equal(0, userBalance, "user has tokens");
+      await talaoInstance.getVaultAccess.sendTransaction(accounts[1], {from:accounts[9]});
+      shouldBeFalse = await talaoInstance.getVaultAccess.call(accounts[1], {from:accounts[9]});
+      assert.isFalse(shouldBeFalse);
     });
 
     it("should not be possible to withdraw more than fees", async() => {
@@ -774,7 +794,7 @@ contract('TalaoCrowdsale', function(accounts) {
       assert.isAbove(balanceAgent2.toNumber(), balanceAgent1.toNumber(), "agent didn't receive its share");
       assert.isAbove(balanceUser1.toNumber(), balanceUser2.toNumber(), "user didn't send tokens");
       assert.isAbove(balanceFreelance2.toNumber(), balanceFreelance1.toNumber(), "freelance didn't receive its share");
-      assert.equal(balanceAgent2.toNumber(), web3.toWei(0.3));
+      assert.equal(balanceAgent2.toNumber(), web3.toWei(0.2));
       assert.equal(balanceFreelance2.c[0], balanceFreelance1.c[0]+9000);
       assert.equal(balanceUser2.c[0], balanceUser1.c[0]-10000);
     });

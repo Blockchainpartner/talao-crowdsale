@@ -287,8 +287,8 @@ contract TalaoToken is MintableToken {
       }
       uint256 freelance_share = data[freelance].accessPrice.mul(data[freelance].sharingPlan).div(100);
       uint256 agent_share = data[freelance].accessPrice.sub(freelance_share);
-      super.transfer(freelance, freelance_share);
-      super.transfer(data[freelance].appointedAgent, agent_share);
+      if(freelance_share>0) super.transfer(freelance, freelance_share);
+      if(agent_share>0) super.transfer(data[freelance].appointedAgent, agent_share);
       accessAllowance[msg.sender][freelance].clientAgreement=true;
       accessAllowance[msg.sender][freelance].clientDate=block.number;
       Vault(msg.sender, freelance, VaultStatus.NewAccess);
