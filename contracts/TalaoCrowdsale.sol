@@ -201,9 +201,9 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
       // checking if a timelock contract has been already created (not the first presale investment)
       // creating a timelock contract if none exists
-      if(timelockedTokensContracts[msg.sender] == 0) {
-        address timelockContract = new TokenTimelock(token, msg.sender, dateOfBonusRelease);
-        timelockedTokensContracts[msg.sender] = timelockContract;
+      if(timelockedTokensContracts[beneficiary] == 0) {
+        address timelockContract = new TokenTimelock(token, beneficiary, dateOfBonusRelease);
+        timelockedTokensContracts[beneficiary] = timelockContract;
       }
 
       // minting timelocked tokens ; balance goes to the timelock contract
@@ -211,7 +211,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       weiRaisedPreSale = weiRaisedPreSale.add(weiAmount);
 
       token.mint(beneficiary, tokens);
-      token.mint(timelockedTokensContracts[msg.sender], timelockedTokens);
+      token.mint(timelockedTokensContracts[beneficiary], timelockedTokens);
       emit TokenPurchase(msg.sender, beneficiary, weiAmount, (tokens.add(timelockedTokens)));
       forwardFunds();
   }
