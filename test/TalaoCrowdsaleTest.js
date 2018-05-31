@@ -135,6 +135,16 @@ contract('TalaoCrowdsale', function(accounts) {
       assert.equal(balanceAdvisorsTimelocked, 3000000000000000000000000, "not enough tokens locked");
 
       await increaseTimeTo(endTime+duration.years(1)+duration.days(10));
+
+      let futureRoundWalletTimelock = await TalaoCrowdsaleInstance.timelockedTokensContracts("0x80a27A56C29b83b25492c06b39AC049e8719a8fd");
+      let futureRoundWalletTimelockInstance = TokenTimelock.at(futureRoundWalletTimelock);
+      await futureRoundWalletTimelockInstance.release();
+      let balanceContractFuture = await talaoInstance.balanceOf(futureRoundWalletTimelock);
+      assert.equal(balanceContractFuture, 0, "tokens not released");
+      let balanceWalletFuture = await talaoInstance.balanceOf("0x80a27A56C29b83b25492c06b39AC049e8719a8fd");
+      assert.isAbove(balanceWalletFuture, 0, "tokens not received");
+      console.log(balanceWalletFuture);
+
       let advisorsTimelockContractInstance = await TokenVesting.at(advisorsTimelockContract);
       balanceBefore = await talaoInstance.balanceOf("0xC9a2BE82Ba706369730BDbd64280bc1132347F85")
       await advisorsTimelockContractInstance.release(talaoAddress);
