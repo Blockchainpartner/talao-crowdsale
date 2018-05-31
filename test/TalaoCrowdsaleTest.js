@@ -7,6 +7,8 @@ import { increaseTimeTo, duration } from './helpers/increaseTime';
 const TalaoCrowdsale = artifacts.require("TalaoCrowdsale");
 const TalaoToken = artifacts.require("TalaoToken");
 const TalaoMarketplace = artifacts.require("TalaoMarketplace");
+const TokenTimelock = artifacts.require("TokenTimelock");
+const TokenVesting = artifacts.require("TokenVesting");
 const RefundVault = artifacts.require("RefundVault")
 const should = require('chai')
   .use(require('chai-as-promised'))
@@ -56,9 +58,10 @@ contract('TalaoCrowdsale', function(accounts) {
     });
   });
 
-  describe('Presale bonus', () => {
+  describe('Presale bonus and release', () => {
     let TalaoCrowdsaleInstance;
     let talaoInstance;
+    let talaoAddress;
     // start and end timestamps where investments are allowed (both inclusive)
     let startPresale = 1528070400;
     let startSale = 1530489600;
@@ -74,7 +77,7 @@ contract('TalaoCrowdsale', function(accounts) {
       startSale = 1530489600;
       endTime = 1532908800;
       TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
-      let talaoAddress = await TalaoCrowdsaleInstance.token.call();
+      talaoAddress = await TalaoCrowdsaleInstance.token.call();
       talaoInstance = TalaoToken.at(talaoAddress);
       await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "12000000000000000000000", {from: accounts[0]});
       await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[2], "12000000000000000000000", {from: accounts[0]});
@@ -113,7 +116,54 @@ contract('TalaoCrowdsale', function(accounts) {
       let timelockContract = await TalaoCrowdsaleInstance.timelockedTokensContracts.call(accounts[4]);
       let lockedBalance = await talaoInstance.balanceOf(timelockContract);
       assert.equal(lockedBalance, 500000000000000000000, "not matching");
-      await increaseTimeTo(latestTime() + duration.days(10));
+    });
+
+    it('should finalize', async() => {
+      await TalaoCrowdsaleInstance.sendTransaction({from: accounts[1], to: TalaoCrowdsaleInstance.address, value: "10000000000000000000000", gas: 4700000});
+      await increaseTimeTo(endTime+1);
+      await TalaoCrowdsaleInstance.finalize({from: accounts[0]});
+      await increaseTimeTo(endTime+duration.days(90)+1);
+      let balanceBefore = await talaoInstance.balanceOf(accounts[1]);
+      let timelockContract = await TalaoCrowdsaleInstance.timelockedTokensContracts(accounts[1])
+      let timelockContractInstance = TokenTimelock.at(timelockContract);
+      await timelockContractInstance.release();
+      let balanceAfter = await talaoInstance.balanceOf(accounts[1]);
+      assert.isAbove(balanceAfter, balanceBefore, "tokens not released");
+
+      let advisorsTimelockContract = await TalaoCrowdsaleInstance.timelockedTokensContracts("0xC9a2BE82Ba706369730BDbd64280bc1132347F85");
+      let balanceAdvisorsTimelocked = await talaoInstance.balanceOf(advisorsTimelockContract);
+      assert.equal(balanceAdvisorsTimelocked, 3000000000000000000000000, "not enough tokens locked");
+
+      await increaseTimeTo(endTime+duration.years(1)+duration.days(10));
+      let advisorsTimelockContractInstance = await TokenVesting.at(advisorsTimelockContract);
+      balanceBefore = await talaoInstance.balanceOf("0xC9a2BE82Ba706369730BDbd64280bc1132347F85")
+      await advisorsTimelockContractInstance.release(talaoAddress);
+      balanceAfter = await talaoInstance.balanceOf("0xC9a2BE82Ba706369730BDbd64280bc1132347F85")
+      assert.isAbove(balanceAfter, balanceBefore, "tokens not released");
+
+      await increaseTimeTo(endTime+duration.years(2)+duration.days(10));
+
+      balanceBefore = await talaoInstance.balanceOf("0xC9a2BE82Ba706369730BDbd64280bc1132347F85")
+      await advisorsTimelockContractInstance.release(talaoAddress);
+      balanceAfter = await talaoInstance.balanceOf("0xC9a2BE82Ba706369730BDbd64280bc1132347F85")
+      assert.isAbove(balanceAfter, balanceBefore, "tokens not released");
+      balanceAdvisorsTimelocked = await talaoInstance.balanceOf(advisorsTimelockContract);
+      assert.equal(balanceAdvisorsTimelocked, 0, "tokens not released entirely");
+
+      await increaseTimeTo(endTime+duration.years(3)+duration.days(10));
+      let founder1timelockContract = await TalaoCrowdsaleInstance.timelockedTokensContracts("0x76934C75Ef9a02D444fa9d337C56c7ab0094154C");
+      let founder1timelockContractInstance = TokenVesting.at(founder1timelockContract);
+      let balanceContract = await talaoInstance.balanceOf(founder1timelockContract);
+      let balanceFounderBefore = await talaoInstance.balanceOf("0x76934C75Ef9a02D444fa9d337C56c7ab0094154C");
+      await founder1timelockContractInstance.release(talaoAddress);
+      let balanceFounderAfter = await talaoInstance.balanceOf("0x76934C75Ef9a02D444fa9d337C56c7ab0094154C");
+      assert.isAbove(balanceFounderAfter, balanceFounderBefore, "tokens not released");
+      await increaseTimeTo(endTime+duration.years(4)+duration.days(10));
+      await founder1timelockContractInstance.release(talaoAddress);
+      balanceContract = await talaoInstance.balanceOf(founder1timelockContract);
+      let finalBalanceFounder = await talaoInstance.balanceOf("0x76934C75Ef9a02D444fa9d337C56c7ab0094154C");
+      assert.equal(finalBalanceFounder, 4000000000000000000000000, "not enough tokens")
+      assert.equal(balanceContract, 0, "tokens not released");
     });
 
   });

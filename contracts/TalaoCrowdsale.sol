@@ -211,8 +211,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       // checking if a timelock contract has been already created (not the first presale investment)
       // creating a timelock contract if none exists
       if(timelockedTokensContracts[beneficiary] == 0) {
-        address timelockContract = new TokenTimelock(token, beneficiary, dateOfBonusRelease);
-        timelockedTokensContracts[beneficiary] = timelockContract;
+        timelockedTokensContracts[beneficiary] = new TokenTimelock(token, beneficiary, dateOfBonusRelease);
       }
 
       // minting timelocked tokens ; balance goes to the timelock contract
@@ -233,18 +232,13 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       internal
   {
       if (goalReached()) {
-        uint cliffDate = now.add(cliffTeamTokensRelease);
-        uint unlockDate = now.add(lockTeamTokens);
-        uint unlockAdvisors = now.add(lockAdvisorsTokens);
-        uint cliffAdvisors = now.add(cliffAdvisors);
-
         // advisors tokens : 3M ; 1 year cliff, vested for another year
-        timelockedTokensContracts[advisorsWallet] = new TokenVesting(advisorsWallet, now, cliffAdvisors, unlockAdvisors, false);
+        timelockedTokensContracts[advisorsWallet] = new TokenVesting(advisorsWallet, now, cliffAdvisorsTokens, lockAdvisorsTokens, false);
 
         // Vesting for founders ; not revocable ; 1 year cliff, vested for another year
-        timelockedTokensContracts[foundersWallet1] = new TokenVesting(foundersWallet1, now, cliffDate, unlockDate, false);
-        timelockedTokensContracts[foundersWallet2] = new TokenVesting(foundersWallet2, now, cliffDate, unlockDate, false);
-        timelockedTokensContracts[foundersWallet3] = new TokenVesting(foundersWallet3, now, cliffDate, unlockDate, false);
+        timelockedTokensContracts[foundersWallet1] = new TokenVesting(foundersWallet1, now, cliffTeamTokensRelease, lockTeamTokens, false);
+        timelockedTokensContracts[foundersWallet2] = new TokenVesting(foundersWallet2, now, cliffTeamTokensRelease, lockTeamTokens, false);
+        timelockedTokensContracts[foundersWallet3] = new TokenVesting(foundersWallet3, now, cliffTeamTokensRelease, lockTeamTokens, false);
 
         // mint remaining tokens out of 150M to be timelocked 1 year for future round(s)
         uint dateOfFutureRoundRelease = now.add(futureRoundTokensRelease);
