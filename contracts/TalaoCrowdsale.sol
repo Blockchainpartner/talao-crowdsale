@@ -40,6 +40,8 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
 
   uint256 public constant cliffTeamTokensRelease = 3 years;
   uint256 public constant lockTeamTokens = 4 years;
+  uint256 public constant cliffAdvisorsTokens = 1 years;
+  uint256 public constant lockAdvisorsTokens = 2 years;
   uint256 public constant futureRoundTokensRelease = 1 years;
   uint256 public constant presaleBonusLock = 90 days;
   uint256 public constant presaleParticipationMinimum = 10 ether;
@@ -233,28 +235,25 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       if (goalReached()) {
         uint cliffDate = now.add(cliffTeamTokensRelease);
         uint unlockDate = now.add(lockTeamTokens);
+        uint unlockAdvisors = now.add(lockAdvisorsTokens);
+        uint cliffAdvisors = now.add(cliffAdvisors);
 
         // advisors tokens : 3M ; 1 year cliff, vested for another year
-        address lockedAdvisorsTokensWallet = new TokenVesting(advisorsWallet, now, cliffDate, unlockDate, false);
-        timelockedTokensContracts[advisorsWallet] = lockedAdvisorsTokensWallet;
+        timelockedTokensContracts[advisorsWallet] = new TokenVesting(advisorsWallet, now, cliffAdvisors, unlockAdvisors, false);
 
         // Vesting for founders ; not revocable ; 1 year cliff, vested for another year
-        address lockedFoundersTokensWallet1 = new TokenVesting(foundersWallet1, now, cliffDate, unlockDate, false);
-        timelockedTokensContracts[foundersWallet1] = lockedFoundersTokensWallet1;
-        address lockedFoundersTokensWallet2 = new TokenVesting(foundersWallet2, now, cliffDate, unlockDate, false);
-        timelockedTokensContracts[foundersWallet2] = lockedFoundersTokensWallet2;
-        address lockedFoundersTokensWallet3 = new TokenVesting(foundersWallet3, now, cliffDate, unlockDate, false);
-        timelockedTokensContracts[foundersWallet3] = lockedFoundersTokensWallet3;
+        timelockedTokensContracts[foundersWallet1] = new TokenVesting(foundersWallet1, now, cliffDate, unlockDate, false);
+        timelockedTokensContracts[foundersWallet2] = new TokenVesting(foundersWallet2, now, cliffDate, unlockDate, false);
+        timelockedTokensContracts[foundersWallet3] = new TokenVesting(foundersWallet3, now, cliffDate, unlockDate, false);
 
-        // mint remaining tokens out of 150M to be timelocked for future round(s)
+        // mint remaining tokens out of 150M to be timelocked 1 year for future round(s)
         uint dateOfFutureRoundRelease = now.add(futureRoundTokensRelease);
-        address lockedRoundsTokensWallet = new TokenTimelock(token, futureRoundWallet, dateOfFutureRoundRelease);
-        timelockedTokensContracts[futureRoundWallet] = lockedRoundsTokensWallet;
+        timelockedTokensContracts[futureRoundWallet] = new TokenTimelock(token, futureRoundWallet, dateOfFutureRoundRelease);
 
-        token.mint(lockedAdvisorsTokensWallet, 3000000000000000000000000);
-        token.mint(lockedFoundersTokensWallet1, 4000000000000000000000000);
-        token.mint(lockedFoundersTokensWallet2, 4000000000000000000000000);
-        token.mint(lockedFoundersTokensWallet3, 4000000000000000000000000);
+        token.mint(timelockedTokensContracts[advisorsWallet], 3000000000000000000000000);
+        token.mint(timelockedTokensContracts[foundersWallet1], 4000000000000000000000000);
+        token.mint(timelockedTokensContracts[foundersWallet2], 4000000000000000000000000);
+        token.mint(timelockedTokensContracts[foundersWallet3], 4000000000000000000000000);
 
         // talao shareholders & employees
         token.mint(shareholdersWallet, 6000000000000000000000000);
@@ -264,7 +263,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
         uint256 totalSupply = token.totalSupply();
         uint256 maxSupply = 150000000000000000000000000;
         uint256 toMint = maxSupply.sub(totalSupply);
-        token.mint(lockedRoundsTokensWallet, toMint);
+        token.mint(timelockedTokensContracts[futureRoundWallet], toMint);
         token.finishMinting();
         // deploy the marketplace
         TalaoToken talao = TalaoToken(address(token));
