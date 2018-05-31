@@ -22,23 +22,34 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   mapping (address => uint256) public presaleParticipation;
   mapping (address => uint256) public presaleIndividualCap;
 
-  uint256 public presaleBonus;
-  uint256 public generalRate;
+  uint256 public constant generalRate = 1000;
+  uint256 public constant presaleBonus = 250;
+  uint256 public constant presaleBonusTier2 = 150;
+  uint256 public constant presaleBonusTier3 = 100;
+  uint256 public constant presaleBonusTier4 = 50;
+
   uint256 public dateOfBonusRelease;
 
   address public constant reserveWallet = 0xC9a2BE82Ba706369730BDbd64280bc1132347F85;
   address public constant futureRoundWallet = 0x80a27A56C29b83b25492c06b39AC049e8719a8fd;
-  address public constant advisorsWallet = 0xE7305033Fe4d5994cd88d69740E9dB59f27c7048;
+  address public constant advisorsWallet = 0xC9a2BE82Ba706369730BDbd64280bc1132347F85;
   address public constant foundersWallet1 = 0x76934C75Ef9a02D444fa9d337C56c7ab0094154C;
   address public constant foundersWallet2 = 0xd21aF5665Dc81563328d5cA2f984b4f6281c333f;
   address public constant foundersWallet3 = 0x0DceD36d883752203E01441bD006725Acd128049;
   address public constant shareholdersWallet = 0x554bC53533876fC501b230274F47598cbD435B5E;
 
-  uint256 public constant cliffTeamTokensRelease = 1 years;
-  uint256 public constant lockTeamTokens = 2 years;
+  uint256 public constant cliffTeamTokensRelease = 3 years;
+  uint256 public constant lockTeamTokens = 4 years;
   uint256 public constant futureRoundTokensRelease = 1 years;
   uint256 public constant presaleBonusLock = 90 days;
-  uint256 public constant presaleParticipationMinimum = 100 ether;
+  uint256 public constant presaleParticipationMinimum = 10 ether;
+
+  // 15%
+  uint256 public constant dateTier2 = 1528761600; // Tuesday 12 June 2018 00:00:00
+  // 10%
+  uint256 public constant dateTier3 = 1529366400; // Tuesday 19 June 2018 00:00:00
+  // 5%
+  uint256 public constant dateTier4 = 1529971200; // Tuesday 26 June 2018 00:00:00
 
   uint256 public baseEthCapPerAddress = 3 ether;
 
@@ -55,18 +66,16 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
   * @param _goal soft cap
   * @param _presaleCap hard cap of the presale
   * @param _cap global hard cap
-  * @param _generalRate number of tokens for 1 ether
-  * @param _presaleBonus number of tokens for 1 ether in presale in addition of the general rate
   * @param _wallet address receiving ether if sale is successful
   **/
   constructor(uint256 _startDate, uint256 _startGeneralSale, uint256 _endDate,
-                          uint256 _goal, uint256 _presaleCap, uint256 _cap, uint256 _generalRate,
-                          uint256 _presaleBonus, address _wallet)
+                          uint256 _goal, uint256 _presaleCap, uint256 _cap,
+                          address _wallet)
       public
       CappedCrowdsale(_cap)
       FinalizableCrowdsale()
       RefundableCrowdsale(_goal)
-      Crowdsale(_generalRate, _startDate, _endDate, _wallet)
+      Crowdsale(generalRate, _startDate, _endDate, _wallet)
       ProgressiveIndividualCappedCrowdsale(baseEthCapPerAddress, _startGeneralSale)
   {
       require(_goal <= _cap, "goal is superior to cap");
@@ -78,8 +87,6 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       startGeneralSale = _startGeneralSale;
       presaleCap = _presaleCap;
       dateOfBonusRelease = endTime.add(presaleBonusLock);
-      generalRate = _generalRate;
-      presaleBonus = _presaleBonus;
   }
 
   /**
@@ -207,7 +214,7 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       }
 
       // minting timelocked tokens ; balance goes to the timelock contract
-      uint256 timelockedTokens = weiAmount.mul(presaleBonus);
+      uint256 timelockedTokens = preSaleBonus(weiAmount);
       weiRaisedPreSale = weiRaisedPreSale.add(weiAmount);
 
       token.mint(beneficiary, tokens);
@@ -317,6 +324,21 @@ contract TalaoCrowdsale is ProgressiveIndividualCappedCrowdsale {
       bool nonZeroPurchase = msg.value != 0;
       bool withinCap = weiRaisedPreSale.add(msg.value) <= presaleCap;
       return withinPeriod && nonZeroPurchase && withinCap && enough && notTooMuch;
+  }
+
+  function preSaleBonus(uint amount)
+      internal
+      returns (uint)
+  {
+      if(now < dateTier2) {
+        return amount.mul(presaleBonus);
+      } else if (now < dateTier3) {
+        return amount.mul(presaleBonusTier2);
+      } else if (now < dateTier4) {
+        return amount.mul(presaleBonusTier3);
+      } else {
+        return amount.mul(presaleBonusTier4);
+      }
   }
 
   /**
