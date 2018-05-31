@@ -14,7 +14,7 @@ contract ProgressiveIndividualCappedCrowdsale is RefundableCrowdsale, CappedCrow
 
     uint public startGeneralSale;
     uint public constant TIME_PERIOD_IN_SEC = 1 days;
-    uint public constant minimumParticipation = 1 ether;
+    uint public constant minimumParticipation = 10 finney;
     uint public constant GAS_LIMIT_IN_WEI = 5E10 wei; // limit gas price -50 Gwei wales stopper
     uint256 public baseEthCapPerAddress;
 

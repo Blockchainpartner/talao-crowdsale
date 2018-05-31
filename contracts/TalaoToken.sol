@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.23;
 
 import './token/MintableToken.sol';
 
@@ -65,7 +65,7 @@ contract TalaoToken is MintableToken {
 
   modifier onlyMintingFinished()
   {
-      require(mintingFinished == true);
+      require(mintingFinished == true, "minting has not finished");
       _;
   }
 
@@ -161,7 +161,7 @@ contract TalaoToken is MintableToken {
       public
       onlyOwner
   {
-      require(balanceOf(this).sub(totalDeposit) >= tokens);
+      require(balanceOf(this).sub(totalDeposit) >= tokens, "too much tokens asked");
       _transfer(this, msg.sender, tokens);
   }
 
@@ -179,22 +179,16 @@ contract TalaoToken is MintableToken {
       public
       onlyMintingFinished
   {
-      require(accessAllowance[msg.sender][msg.sender].clientAgreement==false);
-      if (price>vaultDeposit) {
-          Vault(msg.sender, msg.sender, VaultStatus.PriceTooHigh);
-          return;
-      }
-      if (balanceOf(msg.sender)<vaultDeposit) {
-          Vault(msg.sender, msg.sender, VaultStatus.NotEnoughTokensDeposited);
-          return;
-      }
+      require(accessAllowance[msg.sender][msg.sender].clientAgreement==false, "vault already created");
+      require(price<=vaultDeposit, "price asked is too high");
+      require(balanceOf(msg.sender)>vaultDeposit, "user has not enough tokens to send deposit");
       data[msg.sender].accessPrice=price;
       super.transfer(this, vaultDeposit);
       totalDeposit = totalDeposit.add(vaultDeposit);
       data[msg.sender].userDeposit=vaultDeposit;
       data[msg.sender].sharingPlan=100;
       accessAllowance[msg.sender][msg.sender].clientAgreement=true;
-      Vault(msg.sender, msg.sender, VaultStatus.Created);
+      emit Vault(msg.sender, msg.sender, VaultStatus.Created);
   }
 
   /**
@@ -205,12 +199,12 @@ contract TalaoToken is MintableToken {
       public
       onlyMintingFinished
   {
-      require(accessAllowance[msg.sender][msg.sender].clientAgreement==true);
-      require(_transfer(this, msg.sender, data[msg.sender].userDeposit));
+      require(accessAllowance[msg.sender][msg.sender].clientAgreement==true, "vault has not been created");
+      require(_transfer(this, msg.sender, data[msg.sender].userDeposit), "token deposit transfer failed");
       accessAllowance[msg.sender][msg.sender].clientAgreement=false;
       totalDeposit=totalDeposit.sub(data[msg.sender].userDeposit);
       data[msg.sender].sharingPlan=0;
-      Vault(msg.sender, msg.sender, VaultStatus.Closed);
+      emit Vault(msg.sender, msg.sender, VaultStatus.Closed);
   }
 
   /**
@@ -228,12 +222,12 @@ contract TalaoToken is MintableToken {
       internal
       returns (bool)
   {
-      require(_to != 0x0);
-      require(balances[_from] >= _value);
+      require(_to != 0x0, "destination cannot be 0x0");
+      require(balances[_from] >= _value, "not enough tokens in sender wallet");
 
       balances[_from] = balances[_from].sub(_value);
       balances[_to] = balances[_to].add(_value);
-      Transfer(_from, _to, _value);
+      emit Transfer(_from, _to, _value);
       return true;
   }
 
@@ -248,12 +242,12 @@ contract TalaoToken is MintableToken {
       public
       onlyMintingFinished
   {
-      require(newplan<=100);
-      require(accessAllowance[msg.sender][msg.sender].clientAgreement==true);
-      Vault(data[msg.sender].appointedAgent, msg.sender, VaultStatus.AgentRemoved);
+      require(newplan>=0&&newplan<=100, "plan must be between 0 and 100");
+      require(accessAllowance[msg.sender][msg.sender].clientAgreement==true, "vault has not been created");
+      emit Vault(data[msg.sender].appointedAgent, msg.sender, VaultStatus.AgentRemoved);
       data[msg.sender].appointedAgent=newagent;
       data[msg.sender].sharingPlan=newplan;
-      Vault(newagent, msg.sender, VaultStatus.NewAgent);
+      emit Vault(newagent, msg.sender, VaultStatus.NewAgent);
   }
 
   /**
@@ -279,19 +273,17 @@ contract TalaoToken is MintableToken {
       onlyMintingFinished
       returns (bool)
   {
-      require(accessAllowance[freelance][freelance].clientAgreement==true);
-      require(accessAllowance[msg.sender][freelance].clientAgreement!=true);
-      if (balanceOf(msg.sender)<data[freelance].accessPrice){
-          Vault(msg.sender, freelance, VaultStatus.WrongAccessPrice);
-          return false;
-      }
+      require(accessAllowance[freelance][freelance].clientAgreement==true, "vault does not exist");
+      require(accessAllowance[msg.sender][freelance].clientAgreement!=true, "access was already granted");
+      require(balanceOf(msg.sender)>data[freelance].accessPrice, "user has not enough tokens to get access to vault");
+
       uint256 freelance_share = data[freelance].accessPrice.mul(data[freelance].sharingPlan).div(100);
       uint256 agent_share = data[freelance].accessPrice.sub(freelance_share);
       if(freelance_share>0) super.transfer(freelance, freelance_share);
       if(agent_share>0) super.transfer(data[freelance].appointedAgent, agent_share);
       accessAllowance[msg.sender][freelance].clientAgreement=true;
       accessAllowance[msg.sender][freelance].clientDate=block.number;
-      Vault(msg.sender, freelance, VaultStatus.NewAccess);
+      emit Vault(msg.sender, freelance, VaultStatus.NewAccess);
       return true;
   }
 
