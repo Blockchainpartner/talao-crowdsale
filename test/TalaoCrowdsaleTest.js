@@ -29,7 +29,7 @@ contract('TalaoCrowdsale', function(accounts) {
     let wallet = "0xcf09f36227aa07e3318fa57a16b453d29ecf786d";
 
     before(async () => {
-      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
     });
 
     it('should set startblock', async () => {
@@ -73,7 +73,7 @@ contract('TalaoCrowdsale', function(accounts) {
       startPresale = 1528070400;
       startSale = 1530489600;
       endTime = 1532908800;
-      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
       let talaoAddress = await TalaoCrowdsaleInstance.token.call();
       talaoInstance = TalaoToken.at(talaoAddress);
       await TalaoCrowdsaleInstance.whitelistAddressPresale(accounts[1], "12000000000000000000000", {from: accounts[0]});
@@ -135,7 +135,7 @@ contract('TalaoCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
-      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
       let talaoAddress = await TalaoCrowdsaleInstance.token.call();
       talaoInstance = TalaoToken.at(talaoAddress);
     });
@@ -359,7 +359,7 @@ contract('TalaoCrowdsale', function(accounts) {
         startPresale = latestTime() + duration.minutes(1);
         startSale = latestTime() + duration.days(10);
         endTime = latestTime() + duration.days(30);
-        TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+        TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
         let talaoAddress = await TalaoCrowdsaleInstance.token.call();
         talaoInstance = TalaoToken.at(talaoAddress);
         await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), {from: accounts[0]})
@@ -512,7 +512,7 @@ contract('TalaoCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
-      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
       let talaoAddress = await TalaoCrowdsaleInstance.token.call();
       talaoInstance = TalaoToken.at(talaoAddress);
     });
@@ -546,7 +546,7 @@ contract('TalaoCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endTime = latestTime() + duration.days(30);
-      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
       let talaoAddress = await TalaoCrowdsaleInstance.token.call();
       talaoInstance = TalaoToken.at(talaoAddress);
       await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), {from: accounts[0]});
@@ -600,7 +600,7 @@ contract('TalaoCrowdsale', function(accounts) {
         startPresale = latestTime() + duration.minutes(1);
         startSale = latestTime() + duration.days(10);
         endTime = latestTime() + duration.days(30);
-        TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+        TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endTime,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
         let talaoAddress = await TalaoCrowdsaleInstance.token.call();
         talaoInstance = TalaoToken.at(talaoAddress);
         await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1]), {from: accounts[0]});
@@ -675,7 +675,7 @@ contract('TalaoCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endSale = latestTime() + duration.days(30);
-      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
       let talaoAddress = await TalaoCrowdsaleInstance.token.call();
       talaoInstance = TalaoToken.at(talaoAddress);
       await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1], accounts[2], accounts[3], accounts[4], accounts[5], accounts[6]), {from: accounts[0]});
@@ -881,7 +881,7 @@ contract('TalaoCrowdsale', function(accounts) {
       startPresale = latestTime() + duration.minutes(1);
       startSale = latestTime() + duration.days(10);
       endSale = latestTime() + duration.days(30);
-      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"17592186044415", gasPrice:1});
+      TalaoCrowdsaleInstance = await TalaoCrowdsale.new(startPresale,startSale,endSale,goal,presaleCap,cap,wallet, {from: accounts[0], gas:"8000000", gasPrice:1});
       let talaoAddress = await TalaoCrowdsaleInstance.token.call();
       talaoInstance = await TalaoToken.at(talaoAddress);
       await TalaoCrowdsaleInstance.whitelistAddresses(new Array(accounts[1], accounts[2], accounts[3], accounts[4], accounts[5], accounts[6]), {from: accounts[0]});
